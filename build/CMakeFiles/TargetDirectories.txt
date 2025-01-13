@@ -1,0 +1,4 @@
+/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles/cudaMatMul.dir
+/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles/main.dir
+/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles/edit_cache.dir
+/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles/rebuild_cache.dir

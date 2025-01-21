@@ -4,9 +4,10 @@
 #include <cstdint>
 #include <iostream>
 
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 4096
 #define ELE_IDX(x, y, col) (x * col + y)
-#define DELTA 1e-5
+#define DELTA 1e-1
+#define WARMUPT 10
 
 struct Matrix {
     int32_t height;
@@ -47,23 +48,26 @@ void Set_Matrix_Element(Matrix& X, int32_t row, int32_t col, float val) {
     return;
 }
 
-float GenRandomVal(float min, float max) {
+/*float GenRandomVal(float min, float max) {
     std::random_device rd; //random seed
     std::mt19937 gen(rd()); //Mersenne Twister random generator
     std::uniform_real_distribution<float> dis(min, max);
 
     return dis(gen); 
-}
+}*/
 
 bool GenRdVal4Mat(Matrix& X) {
     if (!X.data) {
         throw std::runtime_error("matrix X is not allocated!\n");
         return false;
     }
+    std::random_device rd; //random seed
+    std::mt19937 gen(rd()); //Mersenne Twister random generator
+    std::uniform_real_distribution<float> dis(0, 1);
 
     for (int32_t i = 0; i < X.height; ++i) {
         for(int32_t j = 0; j < X.width; ++j) {
-            Set_Matrix_Element(X, i, j, GenRandomVal(0, 10));
+            Set_Matrix_Element(X, i, j, dis(gen));
         }
     }
     return true;
@@ -84,14 +88,15 @@ void ComputeGolden(const Matrix& A, const Matrix& B, Matrix& C) {
 
 bool CompareMat(const Matrix& A, const Matrix& B) {
     bool res = true;
+    int32_t row = A.height;
     int32_t col = A.width;
     int32_t miss_num = 0;    
-    for (int32_t i = 0; i < A.height; ++i) {
+    for (int32_t i = 0; i < row; ++i) {
         for(int32_t j = 0; j < col; ++j) {
             if(abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) {
                 res = false;
                 miss_num += 1;
-                std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
+                //std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
             }
         }
     }

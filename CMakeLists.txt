@@ -17,4 +17,4 @@ target_compile_features(cudaMatMul PUBLIC cxx_std_11)
 
 add_executable(main main.cu)
 
-target_link_libraries(main cudaMatMul)
+target_link_libraries(main cudaMatMul cublas)

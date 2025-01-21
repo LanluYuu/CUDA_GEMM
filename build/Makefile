@@ -238,6 +238,30 @@ src/gemm_v1.cu.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/cudaMatMul.dir/build.make CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.s
 .PHONY : src/gemm_v1.cu.s
 
+src/ref_cublas.o: src/ref_cublas.cu.o
+.PHONY : src/ref_cublas.o
+
+# target to build an object file
+src/ref_cublas.cu.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cudaMatMul.dir/build.make CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
+.PHONY : src/ref_cublas.cu.o
+
+src/ref_cublas.i: src/ref_cublas.cu.i
+.PHONY : src/ref_cublas.i
+
+# target to preprocess a source file
+src/ref_cublas.cu.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cudaMatMul.dir/build.make CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.i
+.PHONY : src/ref_cublas.cu.i
+
+src/ref_cublas.s: src/ref_cublas.cu.s
+.PHONY : src/ref_cublas.s
+
+# target to generate assembly for a file
+src/ref_cublas.cu.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cudaMatMul.dir/build.make CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.s
+.PHONY : src/ref_cublas.cu.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -260,6 +284,9 @@ help:
 	@echo "... src/gemm_v1.o"
 	@echo "... src/gemm_v1.i"
 	@echo "... src/gemm_v1.s"
+	@echo "... src/ref_cublas.o"
+	@echo "... src/ref_cublas.i"
+	@echo "... src/ref_cublas.s"
 .PHONY : help
 
 

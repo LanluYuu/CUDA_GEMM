@@ -2,7 +2,7 @@
 #include "d_helper.cu"
 
 __global__ void gemm_v1(d_Matrix A, d_Matrix B, d_Matrix C) {
-    constexpr int32_t BlkProcessSize = BLOCK_SIZE / 2;
+/*    constexpr int32_t BlkProcessSize = BLOCK_SIZE / 2;
     __shared__ float shm_A[BlkProcessSize][BlkProcessSize]; // 4blocks, each block read form global to shared and compute twice.
     __shared__ float shm_B[BlkProcessSize][BlkProcessSize]; 
     __shared__ float res[BlkProcessSize][BlkProcessSize];
@@ -43,5 +43,5 @@ __global__ void gemm_v1(d_Matrix A, d_Matrix B, d_Matrix C) {
         for (int32_t y = 0; y < 2; ++y) {
             C.data[ELE_IDX(bk_start_row + thx * thd_r_size + x, bk_start_col + thy * thd_r_size + y, C.width)] = res[thx * thd_r_size + x][thy * thd_r_size + y];
         }
-    }
+    }*/
 }

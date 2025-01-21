@@ -117,11 +117,27 @@ CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.s"
 	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
 
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o: CMakeFiles/cudaMatMul.dir/flags.make
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o: CMakeFiles/cudaMatMul.dir/includes_CUDA.rsp
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o: /root/haojiachen/code/Cuda_Learn/GEMM/src/ref_cublas.cu
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o: CMakeFiles/cudaMatMul.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CUDA object CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o"
+	/usr/local/cuda/bin/nvcc -forward-unknown-to-host-compiler $(CUDA_DEFINES) $(CUDA_INCLUDES) $(CUDA_FLAGS) -MD -MT CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o -MF CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o.d -x cu -c /root/haojiachen/code/Cuda_Learn/GEMM/src/ref_cublas.cu -o CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
+
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CUDA source to CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.i"
+	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_PREPROCESSED_SOURCE
+
+CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CUDA source to assembly CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.s"
+	$(CMAKE_COMMAND) -E cmake_unimplemented_variable CMAKE_CUDA_CREATE_ASSEMBLY_SOURCE
+
 # Object files for target cudaMatMul
 cudaMatMul_OBJECTS = \
 "CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o" \
 "CMakeFiles/cudaMatMul.dir/src/gemm_v0.cu.o" \
-"CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.o"
+"CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.o" \
+"CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o"
 
 # External object files for target cudaMatMul
 cudaMatMul_EXTERNAL_OBJECTS =
@@ -129,9 +145,10 @@ cudaMatMul_EXTERNAL_OBJECTS =
 libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o
 libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/src/gemm_v0.cu.o
 libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/src/gemm_v1.cu.o
+libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
 libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/build.make
 libcudaMatMul.a: CMakeFiles/cudaMatMul.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CUDA static library libcudaMatMul.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/root/haojiachen/code/Cuda_Learn/GEMM/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CUDA static library libcudaMatMul.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/cudaMatMul.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/cudaMatMul.dir/link.txt --verbose=$(VERBOSE)
 

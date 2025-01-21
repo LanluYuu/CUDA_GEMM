@@ -1,1 +1,1 @@
- libcudaMatMul.a -lcudadevrt -lcudart_static -lrt -lpthread -ldl 
+ libcudaMatMul.a -lcublas -lcudadevrt -lcudart_static -lrt -lpthread -ldl 

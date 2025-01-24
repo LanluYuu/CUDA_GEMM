@@ -41,7 +41,7 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
     cudaEventElapsedTime(&milliseconds, start, end);
     printf("\nExecute time:%fms\n", milliseconds);
     double flopsPerMairixMul = 2.0 * k * m * n;
-    printf("\nThrouphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (milliseconds * 1.0e-3f));
+    printf("Throuphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (milliseconds * 1.0e-3f));
     size_t size = m * n * sizeof(float);
     cudaMemcpy(C_ref, C, size, cudaMemcpyDeviceToHost);
     

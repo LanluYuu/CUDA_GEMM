@@ -16,38 +16,37 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     printf("A gen random done\n");
     GenRdVal4Mat(B);
     printf("B gen random done\n");
-    //compute golden using cublas
-    //ComputeGolden(A, B, C_ref);
-    printf("compute golden done\n");
     cudaError_t err = cudaSetDevice(1);
     if (err != cudaSuccess) {
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
     }
+    //set device 
+    cudaSetDevice(0);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    std::cout << "device name:" << prop.name << std::endl;
+    //cudaDeviceSetAttribute(cudaDevAttrMaxSharedMemoryPerBlock, 128 * 1024);
+    std::cout << "max shared memory size on device 0:" << prop.sharedMemPerBlock / 1024 << "KB" << std::endl;
+
     //init Matrix on device
-    /*d_Matrix A_d(x, z);
-    d_Matrix B_d(z, y);
-    d_Matrix C_d(x, y);
-    printf("C_d matrix data addr:0x%lX", &C_d.data);*/
     float *A_d; float *B_d; float *C_d; float *C_d_ref;
-    size_t size = BLOCK_SIZE * BLOCK_SIZE * sizeof(float);
-    cudaMalloc(&A_d, size);
-    cudaMalloc(&B_d, size);
-    cudaMalloc(&C_d, size);
-    cudaMalloc(&C_d_ref, size);
+    size_t A_size = m * k * sizeof(float);
+    size_t B_size = k * n * sizeof(float);
+    size_t C_size = m * n * sizeof(float);
+    cudaMalloc(&A_d, A_size);
+    cudaMalloc(&B_d, B_size);
+    cudaMalloc(&C_d, C_size);
+    cudaMalloc(&C_d_ref, C_size);
     //memcpy to device
-    /*size_t A_size = A.height * A.width * sizeof(float);
-    size_t B_size = B.height * B.width * sizeof(float);
-    size_t C_size = C * 32 * sizeof(float);*/
-    //cudaMemset(C_d.data, 1, C_size);
-    //err = cudaMemcpy(A_d.data, A.data, A_size, cudaMemcpyHostToDevice);
-    err = cudaMemcpy(A_d, A.data, size, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(A_d, A.data, A_size, cudaMemcpyHostToDevice);
     if (err != cudaSuccess) {
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
-    err = cudaMemcpy(B_d, B.data, size, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(B_d, B.data, B_size, cudaMemcpyHostToDevice);
     if (err != cudaSuccess) {
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
+    //compute golden using cublas
     computeGoldenBlas(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
     //invoke kernel
     cudaEvent_t start, stop;
@@ -55,22 +54,20 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     cudaEventCreate(&stop);
     // =====v0=====
     dim3 dimBlock(32, 32); //set threads per block
-    dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
     // gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d);
     // =====v0===== 
     // =====v1=====
     //dim3 dimBlock(BLOCK_SIZE / 2, BLOCK_SIZE / 2);
     //dim3 dimGrid((x - 1) / BLOCK_SIZE + 1, (y - 1) / BLOCK_SIZE + 1);
-    printf("before warm up\n");
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
-        gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d);
+        gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         cudaDeviceSynchronize();
-        printf("done");
     }
     // =====v1=====
     cudaEventRecord(start, 0);
-    gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d);
+    gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
     printf(" compute gemm done\n");
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -78,11 +75,13 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
     //memcpy to host
-    err = cudaMemcpy(C.data, C_d, size, cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(C.data, C_d, C_size, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
     //compare
+    std::cout << "C data:" << C.data[0] << "," << C.data[1] << "," << C.data[2] << std::endl;
+    std::cout << "C ref data:" << C_ref.data[0] << "," << C_ref.data[1] << "," << C_ref.data[2] << std::endl;
     if (CompareMat(C, C_ref)) {
         printf("\nresult pass!\n");
     } else {
@@ -91,7 +90,7 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     std::cout << "\nExecute time:" << milliseconds << "ms" << std::endl;
     double flopsPerMairixMul = 2.0 * k * m * n;
     double tflops = (flopsPerMairixMul * 1e-12) / (milliseconds * 1e-3);
-    std::cout << "\nThrouphput:" << tflops << "TFLOPS\n";
+    std::cout << "Throuphput:" << tflops << "TFLOPS\n";
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
     cudaFree(A_d);

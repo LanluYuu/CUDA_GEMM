@@ -16,5 +16,5 @@ add_library(cudaMatMul ${cudaFiles})
 target_compile_features(cudaMatMul PUBLIC cxx_std_11)
 
 add_executable(main main.cu)
-
+target_compile_definitions(main PRIVATE K_VERSION=${K_VERSION})
 target_link_libraries(main cudaMatMul cublas)

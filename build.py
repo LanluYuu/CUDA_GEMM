@@ -36,7 +36,7 @@ def main():
     print(f"Created new '{build_dir}' directory")
 
     # s2:run cmake to gen Makefile
-    run_command(f"cmake -DSOURCE_FILE=gemm_v'{args.version}'.cu -B '{build_dir}' .")
+    run_command(f"cmake -DK_VERSION='{args.version}' -DSOURCE_FILE=gemm_v'{args.version}'.cu -B '{build_dir}' .")
 
     with change_directory(build_dir):
         run_command("make")

@@ -1,5 +1,6 @@
 #include "gemm_v0.cu"
 #include "gemm_v1.cu"
+#include "gemm_v2.cu"
 #include "ref_cublas.cu"
 #include "helper.h"
 
@@ -13,9 +14,22 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     printf("init host matirx done\n");
     //generate random value for A matrix
     GenRdVal4Mat(A);
-    printf("A gen random done\n");
+    /*printf("A:\n");
+    for (int32_t i = 0; i < m; ++i) {
+        for (int32_t j = 0; j < k; ++j) {
+            printf("%f,", A.data[ELE_IDX(i, j, k)]);
+        }
+        printf("\n");
+    }*/
+    printf("\n");
     GenRdVal4Mat(B);
-    printf("B gen random done\n");
+    /*printf("B:\n");
+    for (int32_t i = 0; i < m; ++i) {
+        for (int32_t j = 0; j < k; ++j) {
+            printf("%f,", B.data[ELE_IDX(i, j, n)]);
+        }
+        printf("\n");
+    }*/
     cudaError_t err = cudaSetDevice(1);
     if (err != cudaSuccess) {
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
@@ -53,21 +67,39 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     // =====v0=====
+#if K_VERSION == 0 
+    dim3 dimBlock(32, 32); //set threads per block
+    dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
+#elif K_VERSION == 1 
+    // =====v1=====
     dim3 dimBlock(32, 32); //set threads per block
     dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
-    // gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d);
-    // =====v0===== 
-    // =====v1=====
-    //dim3 dimBlock(BLOCK_SIZE / 2, BLOCK_SIZE / 2);
-    //dim3 dimGrid((x - 1) / BLOCK_SIZE + 1, (y - 1) / BLOCK_SIZE + 1);
+#elif K_VERSION == 2
+    // =====v2=====
+    dim3 dimBlock(16, 16);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+    //dim3 dimGrid(1, 1);
+#endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
+#if K_VERSION == 0
+        gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 1
         gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 2
+        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#endif
         cudaDeviceSynchronize();
     }
     // =====v1=====
     cudaEventRecord(start, 0);
+#if K_VERSION == 0
+    gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 1
     gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 2
+    gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#endif
     printf(" compute gemm done\n");
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -80,8 +112,8 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
     //compare
-    std::cout << "C data:" << C.data[0] << "," << C.data[1] << "," << C.data[2] << std::endl;
-    std::cout << "C ref data:" << C_ref.data[0] << "," << C_ref.data[1] << "," << C_ref.data[2] << std::endl;
+    //std::cout << "C data:" << C.data[0] << "," << C.data[1] << "," << C.data[2] << std::endl;
+    //std::cout << "C ref data:" << C_ref.data[0] << "," << C_ref.data[1] << "," << C_ref.data[2] << std::endl;
     if (CompareMat(C, C_ref)) {
         printf("\nresult pass!\n");
     } else {

@@ -1,47 +1,59 @@
 #include <cuda_runtime.h>
 #include "d_helper.cu"
 
-__global__ void gemm_v1(d_Matrix A, d_Matrix B, d_Matrix C) {
-/*    constexpr int32_t BlkProcessSize = BLOCK_SIZE / 2;
-    __shared__ float shm_A[BlkProcessSize][BlkProcessSize]; // 4blocks, each block read form global to shared and compute twice.
-    __shared__ float shm_B[BlkProcessSize][BlkProcessSize]; 
-    __shared__ float res[BlkProcessSize][BlkProcessSize];
+#define MAX_SHM_SIZE 64
+
+__global__ void gemm_v1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    constexpr int32_t read_per_thread = 2; //each thread read 16 data
+    const int32_t loop_times = k / MAX_SHM_SIZE; //each block read and calculate 4096/64=64 times
+    __shared__ float shm_A[MAX_SHM_SIZE][MAX_SHM_SIZE]; 
+    __shared__ float shm_B[MAX_SHM_SIZE][MAX_SHM_SIZE]; 
     int32_t bkx = blockIdx.x;
     int32_t bky = blockIdx.y;
-    int32_t thx = threadIdx.x; // 8x8threads in one block
+    int32_t thx = threadIdx.x; 
     int32_t thy = threadIdx.y;
-    int32_t idx = thy * blockDim.x + thx;
 
-    int32_t bk_start_row  = bkx * BlkProcessSize; // the first row of A which processed by this block
-    int32_t bk_start_col  = bky * BlkProcessSize; // the first col of B which processed by this block
-    int32_t thd_r_size = BlkProcessSize / blockDim.x;
-    for (int32_t i = 0; i < 2; ++i) {
+    const int32_t shm_A_len = MAX_SHM_SIZE, shm_B_len = MAX_SHM_SIZE;
+    int32_t bk_start_row  = bky * shm_A_len; // the first row of A for this block
+    int32_t bk_start_col  = bkx * shm_B_len; // the first col of B for this block
+
+    float res[read_per_thread][read_per_thread] = {0}; 
+
+    #pragma unroll
+    for (int32_t i = 0; i < loop_times; ++i) {
         //read from global to shared mem
-        //each thread read 4 data 
-        int32_t shmA_start_col = i * BlkProcessSize; int32_t shmB_start_row = i * BlkProcessSize;
-        int32_t thd_start_row = bk_start_row + thx * thd_r_size;
-        int32_t thd_start_col = bk_start_col + thy * thd_r_size;
-        for (int32_t x = 0; x < thd_r_size; ++x) {
-            for (int32_t y = 0; y < thd_r_size; ++y) {
-                shm_A[thx * thd_r_size + x][thy * thd_r_size + y] = A.data[ELE_IDX(thd_start_row + thx * thd_r_size + x, shmA_start_col + thy * thd_r_size + y, A.width)];
-                shm_B[thx * thd_r_size + x][thy * thd_r_size + y] = B.data[ELE_IDX(shmB_start_row + thx * thd_r_size + x, thd_start_col + thy * thd_r_size + y, B.width)];
+        int32_t start_col = i * shm_A_len; int32_t start_row = i * shm_B_len;
+        #pragma unroll
+        for (int32_t y = 0; y < read_per_thread; ++y) {
+            for (int32_t x = 0; x < read_per_thread; ++x) {
+                    int32_t A_row = bk_start_row + thy * read_per_thread + y;
+                    int32_t A_col = start_col + thx * read_per_thread + x;
+                    int32_t B_row = start_row + thy * read_per_thread + y;
+                    int32_t B_col = bk_start_col + thx * read_per_thread + x;
+                    shm_A[thy * read_per_thread + y][thx * read_per_thread + x] = A[ELE_IDX(A_row, A_col, k)];
+                    shm_B[thy * read_per_thread + y][thx * read_per_thread + x] = B[ELE_IDX(B_row, B_col, n)];
             }
         }
         __syncthreads();
         //calculate 
-        if (idx < BlkProcessSize) { // the threads(idx from 0-15) calculate
-            for (int32_t x = 0; x < BlkProcessSize; ++x) {
-                for (int32_t y = 0; y < BlkProcessSize; ++y) {
-                    res[x][y] += shm_A[x][idx] * shm_B[idx][y];
+        #pragma unroll
+        for (int32_t a = 0; a < read_per_thread; ++a) {
+            for (int32_t b = 0; b < read_per_thread; ++b) {
+                for (int32_t z = 0; z < shm_A_len; ++z) {
+                    res[a][b] += shm_A[thy * read_per_thread + a][z]
+                                * shm_B[z][thx * read_per_thread + b];
                 }
             }
         }
         __syncthreads();
     }
     // store res to C
-    for (int32_t x = 0; x < 2; ++x) {
-        for (int32_t y = 0; y < 2; ++y) {
-            C.data[ELE_IDX(bk_start_row + thx * thd_r_size + x, bk_start_col + thy * thd_r_size + y, C.width)] = res[thx * thd_r_size + x][thy * thd_r_size + y];
+    #pragma unroll
+    for (int32_t x = 0; x < read_per_thread; ++x) {
+        for (int32_t y = 0; y < read_per_thread; ++y) {
+            int32_t C_row = bk_start_row + thy * read_per_thread + x;
+            int32_t C_col = bk_start_col + thx * read_per_thread + y;
+            C[ELE_IDX(C_row, C_col, n)] = res[x][y];
         }
-    }*/
+    }
 }

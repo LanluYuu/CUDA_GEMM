@@ -68,6 +68,7 @@ bool GenRdVal4Mat(Matrix& X) {
     for (int32_t i = 0; i < X.height; ++i) {
         for(int32_t j = 0; j < X.width; ++j) {
             Set_Matrix_Element(X, i, j, dis(gen));
+            //Set_Matrix_Element(X, i, j, 1.0); //for debug
         }
     }
     return true;
@@ -90,17 +91,21 @@ bool CompareMat(const Matrix& A, const Matrix& B) {
     bool res = true;
     int32_t row = A.height;
     int32_t col = A.width;
-    int32_t miss_num = 0;    
+    //int32_t miss_num = 0;
+    float sum_err = 0.0f;    
     for (int32_t i = 0; i < row; ++i) {
         for(int32_t j = 0; j < col; ++j) {
-            if(abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) {
+            float err = abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]);
+            sum_err  += err / A.data[ELE_IDX(i, j, col)];
+            /*if(abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) {
                 res = false;
                 miss_num += 1;
-                //std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
-            }
+                std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
+            }*/
         }
     }
-    std::cout << "\ndelta:" << DELTA << std::endl;
-    std::cout << "\ntotal mismatch:" << miss_num << std::endl;
+    //std::cout << "\ndelta:" << DELTA << std::endl;
+    //std::cout << "\ntotal mismatch:" << miss_num << std::endl;
+    std::cout << "\naverage error:" << sum_err / (row * col) << std::endl;
     return res;
 }

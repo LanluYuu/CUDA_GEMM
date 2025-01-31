@@ -11,10 +11,10 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(include src)
 message(STATUS "cuda include dirs:${CUDA_INCLUDE_DIRS}")
 
-file(GLOB cudaFiles "src/*.cu" "include/*.cu")
+file(GLOB cudaFiles "src/${SOURCE_FILE}" "src/ref_cublas.cu" "include/*.cu")
 add_library(cudaMatMul ${cudaFiles})
 target_compile_features(cudaMatMul PUBLIC cxx_std_11)
 
 add_executable(main main.cu)
-
+target_compile_definitions(main PRIVATE K_VERSION=${K_VERSION})
 target_link_libraries(main cudaMatMul cublas)

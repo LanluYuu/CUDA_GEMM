@@ -34,5 +34,6 @@ void MatMul() { //Matirx A(x, z) * B(z, y)
 }
 
 int main() {
+    
     MatMul();
 }

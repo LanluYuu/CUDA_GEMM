@@ -1,82 +1,103 @@
 #include <cuda_runtime.h>
 #include "d_helper.cu"
 
-#define MAX_SHM_SIZE 32
+#define MAX_SHM_SIZE 64
 
 __global__ void gemm_v2(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
-    constexpr int32_t eleNumPerThread = 4; // each thread read 4 data from Gmemory
-    const int32_t times = k / MAX_SHM_SIZE;
-    __shared__ float shm_A[2][MAX_SHM_SIZE * MAX_SHM_SIZE]; // double buffer
-    __shared__ float shm_B[2][MAX_SHM_SIZE * MAX_SHM_SIZE];
-
+    constexpr int32_t read_per_thread = 2; //each thread read 16 data
+    const int32_t loop_times = k / MAX_SHM_SIZE; //each block read and calculate 4096/64=64 times
+    __shared__ float shm_A[MAX_SHM_SIZE][MAX_SHM_SIZE]; 
+    __shared__ float shm_B[MAX_SHM_SIZE][MAX_SHM_SIZE]; 
     int32_t bkx = blockIdx.x;
     int32_t bky = blockIdx.y;
-    int32_t thx = threadIdx.x;
+    int32_t thx = threadIdx.x; 
     int32_t thy = threadIdx.y;
-    int32_t thread_id = thy * blockDim.x + thx;
 
-    double res[2][2] = {{0}};
+    const int32_t shm_A_len = MAX_SHM_SIZE, shm_B_len = MAX_SHM_SIZE;
+    int32_t bk_start_row  = bky * shm_A_len; // the first row of A for this block
+    int32_t bk_start_col  = bkx * shm_B_len; // the first col of B for this block
 
-    int32_t bk_start_row = bky * MAX_SHM_SIZE;
-    int32_t bk_start_col = bkx * MAX_SHM_SIZE;
-    // firstly read from Gmemory, fill the stage0 shared memory
-    int32_t stage = 0;
-    int32_t shm_row = (thread_id * eleNumPerThread) / 32;
-    int32_t shm_col = (thread_id * eleNumPerThread) % 32;
-    int32_t A_row = bk_start_row + shm_row;
-    int32_t A_col = 0 + shm_col; // because of first time read
-    int32_t B_row = 0 + shm_row;
-    int32_t B_col = bk_start_col + shm_col;
+    float res[read_per_thread][read_per_thread] = {0}; 
 
     #pragma unroll
-    for (int32_t i = 0; i < eleNumPerThread; ++i) {
-        if (A_row < m && A_col + i < k) 
-            shm_A[stage][ELE_IDX(shm_row, shm_col + i, MAX_SHM_SIZE)] = A[ELE_IDX(A_row, A_col + i, k)];
-        if (B_row < k && B_col + i < n) 
-            shm_B[stage][ELE_IDX(shm_row, shm_col + i, MAX_SHM_SIZE)] = B[ELE_IDX(B_row, B_col + i, n)];
-    }
-    __syncthreads();
-    // loop: read-->calculate
-    #pragma unroll
-    for (int32_t i = 0; i < times; ++i) { // last time no read only calculate
-        int32_t next_stage = (stage + 1) % 2;
-        if (i < times - 1) {
-            A_col = (i + 1) * MAX_SHM_SIZE + shm_col;
-            B_row = (i + 1) * MAX_SHM_SIZE + shm_row;
-            #pragma unroll
-            for (int32_t j = 0; j < eleNumPerThread; ++j) {
-                if (A_row < m && A_col + j < k) 
-                    shm_A[next_stage][ELE_IDX(shm_row, shm_col + j, MAX_SHM_SIZE)] = A[ELE_IDX(A_row, A_col + j, k)];
-                if (B_row < k && B_col + j < n) 
-                    shm_B[next_stage][ELE_IDX(shm_row, shm_col + j, MAX_SHM_SIZE)] = B[ELE_IDX(B_row, B_col + j, n)];
+    for (int32_t i = 0; i < loop_times; ++i) {
+        //read from global to shared mem
+        int32_t start_col = i * shm_A_len; int32_t start_row = i * shm_B_len;
+        #pragma unroll
+        for (int32_t y = 0; y < read_per_thread; ++y) {
+            for (int32_t x = 0; x < read_per_thread; ++x) {
+                    int32_t A_row = bk_start_row + thy * read_per_thread + y;
+                    int32_t A_col = start_col + thx * read_per_thread + x;
+                    int32_t B_row = start_row + thy * read_per_thread + y;
+                    int32_t B_col = bk_start_col + thx * read_per_thread + x;
+                    shm_A[thy * read_per_thread + y][thx * read_per_thread + x] = A[ELE_IDX(A_row, A_col, k)];
+                    shm_B[thy * read_per_thread + y][thx * read_per_thread + x] = B[ELE_IDX(B_row, B_col, n)];
             }
         }
         __syncthreads();
-        // read to next stage done, now calculate
+        //calculate 
         #pragma unroll
-        for (int32_t x = 0; x < 2; ++x) {
-            #pragma unroll
-            for (int32_t y = 0; y < 2; ++y) {
-                #pragma unroll
-                for (int32_t z = 0; z < MAX_SHM_SIZE; ++z) {
-                    res[x][y] += shm_A[stage][ELE_IDX((2 * thy + x), z, MAX_SHM_SIZE)] * 
-                                shm_B[stage][ELE_IDX(z, (2 * thx + y), MAX_SHM_SIZE)];
+        for (int32_t a = 0; a < read_per_thread; ++a) {
+            for (int32_t b = 0; b < read_per_thread; ++b) {
+                for (int32_t z = 0; z < shm_A_len; ++z) {
+                    res[a][b] += shm_A[thy * read_per_thread + a][z]
+                                * shm_B[z][thx * read_per_thread + b];
                 }
             }
         }
-        stage = next_stage;
+        __syncthreads();
     }
-    
-    // store to G_memory
+    // store res to C
     #pragma unroll
-    for (int32_t x = 0; x < 2; ++x) {
-        #pragma unroll
-        for (int32_t y = 0; y < 2; ++y) {
-            int32_t C_row = bk_start_row + 2 * thy + x;
-            int32_t C_col = bk_start_col + 2 * thx + y;
-            if (C_row < m && C_col < n)
-                C[ELE_IDX(C_row, C_col, n)] = res[x][y];
+    for (int32_t x = 0; x < read_per_thread; ++x) {
+        for (int32_t y = 0; y < read_per_thread; ++y) {
+            int32_t C_row = bk_start_row + thy * read_per_thread + x;
+            int32_t C_col = bk_start_col + thx * read_per_thread + y;
+            C[ELE_IDX(C_row, C_col, n)] = res[x][y];
         }
     }
-    __syncthreads();
+}
+
+// block(8 x 64), each thread calculate 8 results
+__global__ void gemm_v2_1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    const int32_t TM = 8; // each thread is responsible for 8x1 vector res
+    const int32_t BM = 64;
+    const int32_t bkx = blockIdx.x;
+    const int32_t bky = blockIdx.y;
+    const int32_t thx = threadIdx.x;
+    const int32_t thy = threadIdx.y;
+    const int32_t tid = thy * blockDim.x + thx;
+    //printf("bkx:%d, bky:%d, thx:%d, thy:%d\n", bkx, bky, thx, thy);
+    //printf("griddim:%d, %d, blockdim:%d, %d\n", gridDim.x, gridDim.y, blockDim.x, blockDim.y);
+    const int32_t start_row = bky * BM;
+    const int32_t start_col = bkx * BM;
+    float res[TM] = {0.0f};
+    __shared__ float shm_A[BM][TM];
+    __shared__ float shm_B[TM][BM];
+
+    #pragma unroll
+    for (int32_t stride = 0; stride < k; stride += TM) {
+        //if (bkx == 0 && bky == 0 && thx == 0 && thy == 0) {
+        //    printf("0\n");
+        //}
+        shm_A[tid / 8][tid % 8] = A[ELE_IDX((start_row + tid / 8), (stride + tid % 8), k)];
+        
+        shm_B[thy][thx] = B[ELE_IDX((stride + thy), (start_col + thx), n)];
+
+        __syncthreads();
+
+        #pragma unroll
+        for (int32_t b_row = 0; b_row < TM; ++b_row) {
+            float b_tmp = shm_B[b_row][thx];
+            #pragma unroll
+            for (int32_t a_row = 0; a_row < TM; ++a_row) {
+                res[a_row] += shm_A[TM * thy + a_row][b_row] * b_tmp;
+            }
+        }
+        __syncthreads();
+    }
+    #pragma unroll
+    for (int32_t i = 0; i < TM; ++i) {
+        C[ELE_IDX((start_row + thy * TM + i), (start_col + thx), n)] = res[i];
+    }
 }

@@ -91,17 +91,17 @@ bool CompareMat(const Matrix& A, const Matrix& B) {
     bool res = true;
     int32_t row = A.height;
     int32_t col = A.width;
-    //int32_t miss_num = 0;
+    int32_t miss_num = 0;
     float sum_err = 0.0f;    
     for (int32_t i = 0; i < row; ++i) {
         for(int32_t j = 0; j < col; ++j) {
             float err = abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]);
             sum_err  += err / A.data[ELE_IDX(i, j, col)];
-            /*if(abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) {
+            if((abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) && miss_num < 20) {
                 res = false;
                 miss_num += 1;
                 std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
-            }*/
+            }
         }
     }
     //std::cout << "\ndelta:" << DELTA << std::endl;

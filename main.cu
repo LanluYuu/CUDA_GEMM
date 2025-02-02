@@ -1,6 +1,7 @@
 #include "gemm_v0.cu"
 #include "gemm_v1.cu"
 #include "gemm_v2.cu"
+#include "gemm_v3.cu"
 #include "ref_cublas.cu"
 #include "helper.h"
 
@@ -67,17 +68,21 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     // =====v0=====
-#if K_VERSION == 0 
+#if K_VERSION == 0
     dim3 dimBlock(32, 32); //set threads per block
     dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
-#elif K_VERSION == 1 
+#elif K_VERSION == 1
     // =====v1=====
     dim3 dimBlock(32, 32); //set threads per block
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+    dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
 #elif K_VERSION == 2
+    // =====v1.5=====
+    dim3 dimBlock(64, 8); //set threads per block
+    dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
+#elif K_VERSION == 3
     // =====v2=====
     dim3 dimBlock(16, 16);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
     //dim3 dimGrid(1, 1);
 #endif
     //warm up for 10times
@@ -87,7 +92,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 #elif K_VERSION == 1
         gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 2
-        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 3
+        gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
         cudaDeviceSynchronize();
     }
@@ -98,7 +105,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 #elif K_VERSION == 1
     gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 2
-    gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+    gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 3
+    gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
     printf(" compute gemm done\n");
     cudaEventRecord(stop, 0);

@@ -9,6 +9,7 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
         printf("\ncublas handle create fail!\n");
         return false;
     }
+    //cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH);
     float alpha = 1.0f;
     float beta  = 0.0f;
 
@@ -22,26 +23,30 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
                 &beta, 
                 C, n);
     }
+
+    const int32_t run_times = 100;
     cudaEvent_t start, end;
     cudaEventCreate(&start);
     cudaEventCreate(&end);
     cudaEventRecord(start, 0);
+    for (int32_t times = 0; times < run_times; ++times) {    
 
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
-                n, m, k,
-                &alpha,
-                B, n,
-                A, k, 
-                &beta, 
-                C, n);
-    
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
+                    n, m, k,
+                    &alpha,
+                    B, n,
+                    A, k, 
+                    &beta, 
+                    C, n);
+    }
     cudaEventRecord(end, 0);
     cudaEventSynchronize(end);
-    float milliseconds = 0.0f;
-    cudaEventElapsedTime(&milliseconds, start, end);
-    printf("\nExecute time:%fms\n", milliseconds);
+    float ms_sum = 0.0f;
+    cudaEventElapsedTime(&ms_sum, start, end);
+    float avg_ms = ms_sum / run_times;
+    printf("\nExecute time:%fms\n", avg_ms);
     double flopsPerMairixMul = 2.0 * k * m * n;
-    printf("Throuphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (milliseconds * 1.0e-3f));
+    printf("Throuphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (avg_ms * 1.0e-3f));
     size_t size = m * n * sizeof(float);
     cudaMemcpy(C_ref, C, size, cudaMemcpyDeviceToHost);
     

@@ -2,6 +2,7 @@
 #include "gemm_v1.cu"
 #include "gemm_v2.cu"
 #include "gemm_v3.cu"
+#include "gemm_v4.cu"
 #include "ref_cublas.cu"
 #include "helper.h"
 
@@ -15,22 +16,7 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     printf("init host matirx done\n");
     //generate random value for A matrix
     GenRdVal4Mat(A);
-    /*printf("A:\n");
-    for (int32_t i = 0; i < m; ++i) {
-        for (int32_t j = 0; j < k; ++j) {
-            printf("%f,", A.data[ELE_IDX(i, j, k)]);
-        }
-        printf("\n");
-    }*/
-    printf("\n");
     GenRdVal4Mat(B);
-    /*printf("B:\n");
-    for (int32_t i = 0; i < m; ++i) {
-        for (int32_t j = 0; j < k; ++j) {
-            printf("%f,", B.data[ELE_IDX(i, j, n)]);
-        }
-        printf("\n");
-    }*/
     cudaError_t err = cudaSetDevice(1);
     if (err != cudaSuccess) {
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
@@ -40,8 +26,6 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     std::cout << "device name:" << prop.name << std::endl;
-    //cudaDeviceSetAttribute(cudaDevAttrMaxSharedMemoryPerBlock, 128 * 1024);
-    std::cout << "max shared memory size on device 0:" << prop.sharedMemPerBlock / 1024 << "KB" << std::endl;
 
     //init Matrix on device
     float *A_d; float *B_d; float *C_d; float *C_d_ref;
@@ -84,6 +68,10 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     dim3 dimBlock(16, 16);
     dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
     //dim3 dimGrid(1, 1);
+#elif K_VERSION == 4
+    // =====v2=====
+    dim3 dimBlock(16, 16);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
 #endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
@@ -95,6 +83,8 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 3
         gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 4
+        gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
         cudaDeviceSynchronize();
     }
@@ -108,6 +98,8 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 3
     gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 4
+        gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
     printf(" compute gemm done\n");
     cudaEventRecord(stop, 0);

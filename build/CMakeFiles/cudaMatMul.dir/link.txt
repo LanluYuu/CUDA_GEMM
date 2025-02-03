@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcudaMatMul.a CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o CMakeFiles/cudaMatMul.dir/src/gemm_v2.cu.o CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
-/usr/bin/ranlib libcudaMatMul.a

@@ -3,7 +3,7 @@
 
 #define MAX_SHM_SIZE 32
 
-__global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+/*__global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
     constexpr int32_t eleNumPerThread = 4; // each thread read 4 data from Gmemory
     const int32_t times = k / MAX_SHM_SIZE;
     __shared__ float shm_A[2][MAX_SHM_SIZE * (MAX_SHM_SIZE + 1)]; // double buffer
@@ -80,7 +80,7 @@ __global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int3
         }
     }
     __syncthreads();
-}
+}*/
 
 __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) { // inherit form gemm_v2_1
 // each thread read 4 * 2 data from G_mem
@@ -94,7 +94,9 @@ __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, in
     const int32_t thx = threadIdx.x;
     const int32_t thy = threadIdx.y;
     const int32_t tid = thy * blockDim.x + thx;
-
+    
+        //printf("bkx:%d, bky:%d", bkx, bky);
+    
     const int32_t start_row = bky * BM;
     const int32_t start_col = bkx * BN;
     __shared__ float shm_A[BM][BK];
@@ -108,16 +110,30 @@ __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, in
     for (int32_t stride = 0; stride < k; stride += BK) {
         #pragma unroll
         for (int32_t i = 0; i < Trs; ++i) {
-            shm_A[tid * 4 / 8][(tid * 4 % 8) + i]     = A[ELE_IDX((start_row + tid * 4 / 8), (stride + (tid * 4 % 8) + i), k)];
-            shm_B[tid * 4 / 128][(tid * 4 % 128) + i] = B[ELE_IDX((stride + tid * 4 / 128), (start_col + (tid * 4 % 128) + i), n)];
+            shm_A[(tid / 8) * 4 + i][(tid % 8)]     = A[ELE_IDX((start_row + (tid / 8) * 4 + i), (stride + (tid % 8)), k)];
+        }
+        #pragma unroll 
+        for (int32_t i = 0; i < Trs; ++i) {
+            shm_B[(tid / 128) * 4 + i][(tid % 128)] = B[ELE_IDX((stride + (tid / 128) * 4 + i), (start_col + (tid % 128)), n)];
         }
         __syncthreads();
-
+        /*if (bkx < 3 && bky < 3 && thx < 3 && thy < 3) {
+            printf("\nshmA:\n");
+            for (int32_t i = 0; i < BM; ++i) {
+                for (int32_t j = 0; j < BK; ++j) {
+                    printf("%f,", shm_A[i][j]);                    
+                }
+                printf("\n");
+            }
+        }*/
         #pragma unroll
         for(int32_t dotIdx = 0; dotIdx < BK; ++dotIdx) {
             #pragma unroll
             for (int32_t i = 0; i < Tcs; ++i) {
                 reg_A[i] = shm_A[Tcs * thy + i][dotIdx];
+            }
+            #pragma unroll 
+            for (int32_t i = 0; i < Tcs; ++i) {
                 reg_B[i] = shm_B[dotIdx][Tcs * thx + i];
             }
             #pragma unroll

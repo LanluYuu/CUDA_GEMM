@@ -1,4 +1,5 @@
-Gemm version:2
+Gemm version:4
+Removed exsiting 'build' directory
 Created new 'build' directory
 -- The CXX compiler identification is GNU 12.3.0
 -- The CUDA compiler identification is NVIDIA 12.1.105 with host compiler GNU 12.3.0
@@ -17,12 +18,12 @@ Created new 'build' directory
 -- Found Threads: TRUE
 -- Found CUDA: /usr/local/cuda (found version "12.1")
 -- cuda include dirs:/usr/local/cuda/include
--- Configuring done (2.3s)
+-- Configuring done (2.2s)
 -- Generating done (0.0s)
 -- Build files have been written to: /root/haojiachen/code/Cuda_Learn/GEMM/build
 
 [ 16%] Building CUDA object CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o
-[ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/gemm_v2.cu.o
+[ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/gemm_v4.cu.o
 [ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
 [ 66%] Linking CUDA static library libcudaMatMul.a
 [ 66%] Built target cudaMatMul
@@ -31,18 +32,16 @@ Created new 'build' directory
 [100%] Built target main
 
 init host matirx done
-
 device name:NVIDIA A100-SXM4-80GB
-max shared memory size on device 0:48KB
 
-Execute time:8.826880ms
-Throuphput:15.570501TFLOPS
+Execute time:0.973568ms
+Throuphput:141.170367TFLOPS
  compute gemm done
 
-average error:0
+average error:4.97363e-05
 
 result pass!
 
-Execute time:13.4984ms
-Throuphput:10.1819TFLOPS
+Execute time:8.8576ms
+Throuphput:15.5165TFLOPS
 

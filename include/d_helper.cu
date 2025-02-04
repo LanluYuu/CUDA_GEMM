@@ -4,6 +4,7 @@
 #include <cstdio>
 #define BLOCK_SIZE 4096
 #define ELE_IDX(x, y, col) (x * col + y)
+#define FLOAT4(arr) reinterpret_cast<float4*>(&arr)[0]
 
 struct d_Matrix { 
     int32_t height;

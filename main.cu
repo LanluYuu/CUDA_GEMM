@@ -3,6 +3,7 @@
 #include "gemm_v2.cu"
 #include "gemm_v3.cu"
 #include "gemm_v4.cu"
+#include "gemm_v5.cu"
 #include "ref_cublas.cu"
 #include "helper.h"
 
@@ -60,18 +61,22 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     dim3 dimBlock(32, 32); //set threads per block
     dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
 #elif K_VERSION == 2
-    // =====v1.5=====
+    // =====v2.1=====
     dim3 dimBlock(64, 8); //set threads per block
     dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
 #elif K_VERSION == 3
-    // =====v2=====
+    // =====v3=====
     dim3 dimBlock(16, 16);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 4, ((n - 1) / dimBlock.y + 1) / 4);
     //dim3 dimGrid(1, 1);
 #elif K_VERSION == 4
-    // =====v2=====
+    // =====v4====
     dim3 dimBlock(16, 16);
     dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
+#elif K_VERSION == 5
+    // =====v5=====
+    dim3 dimBlock(128);
+    dim3 dimGrid(32, 64);
 #endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
@@ -85,28 +90,35 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 4
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 5
+        gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
         cudaDeviceSynchronize();
     }
-    // =====v1=====
+    // begin record time
     cudaEventRecord(start, 0);
+    #pragma unroll
+    for (int32_t times = 0; times < 100; ++times) {
 #if K_VERSION == 0
-    gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 1
-    gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 2
-    gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 3
-    gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 4
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 5
+        gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
-    printf(" compute gemm done\n");
+    }
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaDeviceSynchronize();
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
+    float ms_sum = 0;
+    cudaEventElapsedTime(&ms_sum, start, stop);
+    float avg_ms = ms_sum / 100.0f;
     //memcpy to host
     err = cudaMemcpy(C.data, C_d, C_size, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {
@@ -120,9 +132,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     } else {
         printf("\ncompare fail!\n");
     }
-    std::cout << "\nExecute time:" << milliseconds << "ms" << std::endl;
+    std::cout << "\nExecute time:" << avg_ms << "ms" << std::endl;
     double flopsPerMairixMul = 2.0 * k * m * n;
-    double tflops = (flopsPerMairixMul * 1e-12) / (milliseconds * 1e-3);
+    double tflops = (flopsPerMairixMul * 1e-12) / (avg_ms * 1e-3);
     std::cout << "Throuphput:" << tflops << "TFLOPS\n";
     cudaEventDestroy(start);
     cudaEventDestroy(stop);

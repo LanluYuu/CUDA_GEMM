@@ -29,6 +29,7 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
     cudaEventCreate(&start);
     cudaEventCreate(&end);
     cudaEventRecord(start, 0);
+    #pragma unroll
     for (int32_t times = 0; times < run_times; ++times) {    
 
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 

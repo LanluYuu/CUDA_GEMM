@@ -1,9 +1,9 @@
 #include <cuda_runtime.h>
 #include "d_helper.cu"
 
-#define FLOAT4(arr) reinterpret_cast<float4*>(&arr)[0]
-
 __global__ void gemm_v4(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) { 
+// config: BM=BN=128, BK=8, TM=TN=8, Throuphput:15.7808TFLOPS
+// config: BM=BN=64, BK=4, TM=TN=4, Throuphput:16.2901TFLOPS
     constexpr int32_t BM  = 128; 
     constexpr int32_t BN  = 128;
     constexpr int32_t BK  = 8;
@@ -30,7 +30,7 @@ __global__ void gemm_v4(float* A, float* B, float* C, int32_t m, int32_t k, int3
         shm_A[(tid * Trs % BK) + 2][tid * Trs / BK] = tmp.z;
         shm_A[(tid * Trs % BK) + 3][tid * Trs / BK] = tmp.w;
         
-        FLOAT4(shm_B[tid * 4 / BN][tid * 4 % BN]) = FLOAT4(B[ELE_IDX((stride + tid * 4 / BN), (start_col + tid * 4 % BN), n)]);
+        FLOAT4(shm_B[tid * Trs / BN][tid * Trs % BN]) = FLOAT4(B[ELE_IDX((stride + tid * Trs / BN), (start_col + tid * Trs % BN), n)]);
         __syncthreads();
         /*if(bkx == 0 && bky == 0 && thx == 1 && thy == 0) {
             printf("shmB:\n");

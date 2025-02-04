@@ -84,11 +84,13 @@
 
 __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) { // inherit form gemm_v2_1
 // each thread read 4 * 2 data from G_mem
-    constexpr int32_t BM  = 128; 
-    constexpr int32_t BN  = 128;
-    constexpr int32_t BK  = 8;
+// config: BM=BN=128, BK=8, TM=TN=8, Throuphput:14.4195TFLOPS
+// config: BM=BN=64, BK=4, TM=TN=4, Throuphput:16.0148TFLOPS
+    constexpr int32_t BM  = 64; 
+    constexpr int32_t BN  = 64;
+    constexpr int32_t BK  = 16;
     constexpr int32_t Trs = 4; // thread read 4 data 
-    constexpr int32_t Tcs = 8; // thread calculte 8x8 
+    constexpr int32_t Tcs = 4; // thread calculte 8x8 
     const int32_t bkx = blockIdx.x;
     const int32_t bky = blockIdx.y;
     const int32_t thx = threadIdx.x;
@@ -110,11 +112,11 @@ __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, in
     for (int32_t stride = 0; stride < k; stride += BK) {
         #pragma unroll
         for (int32_t i = 0; i < Trs; ++i) {
-            shm_A[(tid / 8) * 4 + i][(tid % 8)]     = A[ELE_IDX((start_row + (tid / 8) * 4 + i), (stride + (tid % 8)), k)];
+            shm_A[(tid / BK) * Trs + i][(tid % BK)]     = A[ELE_IDX((start_row + (tid / BK) * Trs + i), (stride + (tid % BK)), k)];
         }
         #pragma unroll 
         for (int32_t i = 0; i < Trs; ++i) {
-            shm_B[(tid / 128) * 4 + i][(tid % 128)] = B[ELE_IDX((stride + (tid / 128) * 4 + i), (start_col + (tid % 128)), n)];
+            shm_B[(tid / BN) * Trs + i][(tid % BN)] = B[ELE_IDX((stride + (tid / BN) * Trs + i), (start_col + (tid % BN)), n)];
         }
         __syncthreads();
         /*if (bkx < 3 && bky < 3 && thx < 3 && thy < 3) {

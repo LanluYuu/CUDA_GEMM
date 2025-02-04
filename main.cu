@@ -4,7 +4,11 @@
 #include "gemm_v3.cu"
 #include "gemm_v4.cu"
 #include "gemm_v5.cu"
-#include "ref_cublas.cu"
+#if defined(USE_CUBLAS)
+    #include "ref_cublas.cu"
+#elif defined(USE_CUTLASS)
+    #include "ref_cutlass.cu"
+#endif
 #include "helper.h"
 
 //host code
@@ -46,8 +50,15 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     if (err != cudaSuccess) {
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
-    //compute golden using cublas
+    //compute golden using cublas or cutlass
+    //std::cout << "main:::" << REF_TYPE << std::endl;E
+#if defined(USE_CUBLAS)
     computeGoldenBlas(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
+#elif defined(USE_CUTLASS)
+    computeGoldenCutlass(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
+#else 
+    std::cerr << "which reference not defined!" << std::endl;
+#endif
     //invoke kernel
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

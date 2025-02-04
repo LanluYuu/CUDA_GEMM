@@ -45,9 +45,9 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
     float ms_sum = 0.0f;
     cudaEventElapsedTime(&ms_sum, start, end);
     float avg_ms = ms_sum / run_times;
-    printf("\nExecute time:%fms\n", avg_ms);
+    printf("\nCublas Execute time:%fms\n", avg_ms);
     double flopsPerMairixMul = 2.0 * k * m * n;
-    printf("Throuphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (avg_ms * 1.0e-3f));
+    printf("Cublas Throuphput:%lfTFLOPS\n", (flopsPerMairixMul * 1.0e-12f) / (avg_ms * 1.0e-3f));
     size_t size = m * n * sizeof(float);
     cudaMemcpy(C_ref, C, size, cudaMemcpyDeviceToHost);
     

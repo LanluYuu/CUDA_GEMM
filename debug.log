@@ -1,4 +1,6 @@
 Gemm version:5
+Reference:cublas
+Removed exsiting 'build' directory
 Created new 'build' directory
 -- The CXX compiler identification is GNU 12.3.0
 -- The CUDA compiler identification is NVIDIA 12.1.105 with host compiler GNU 12.3.0
@@ -16,14 +18,16 @@ Created new 'build' directory
 -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
 -- Found Threads: TRUE
 -- Found CUDA: /usr/local/cuda (found version "12.1")
--- cuda include dirs:/usr/local/cuda/include
--- Configuring done (2.3s)
+-- cuda include dirs:/usr/local/cuda/include, ref_cublas.cu
+-- REF_TYPE:cublas
+-- Configuring done (2.2s)
 -- Generating done (0.0s)
 -- Build files have been written to: /root/haojiachen/code/Cuda_Learn/GEMM/build
 
+cmake -DK_VERSION='5' -DREF_TYPE='cublas' -DSOURCE_FILE=gemm_v'5'.cu -B 'build' .
 [ 16%] Building CUDA object CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o
-[ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/gemm_v5.cu.o
-[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/ref_cublas.cu.o
+[ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/ref/ref_cublas.cu.o
+[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/gemm_v5.cu.o
 [ 66%] Linking CUDA static library libcudaMatMul.a
 [ 66%] Built target cudaMatMul
 [ 83%] Building CUDA object CMakeFiles/main.dir/main.cu.o
@@ -32,14 +36,15 @@ Created new 'build' directory
 
 init host matirx done
 device name:NVIDIA A100-SXM4-80GB
+cublasXXXXXX
 
-Execute time:7.345121ms
-Throuphput:18.711596TFLOPS
+Cublas Execute time:7.528479ms
+Cublas Throuphput:18.255871TFLOPS
 
 average error:0
 
 result pass!
 
-Execute time:7.93258ms
-Throuphput:17.3259TFLOPS
+Execute time:7.93243ms
+Throuphput:17.3262TFLOPS
 

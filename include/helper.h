@@ -9,6 +9,7 @@
 #define ELE_IDX(x, y, col) (x * col + y)
 #define DELTA 1e-1
 #define WARMUPT 10
+#define RUNTIMES 100
 
 struct Matrix {
     int32_t height;
@@ -98,15 +99,15 @@ bool CompareMat(const Matrix& A, const Matrix& B) {
         for(int32_t j = 0; j < col; ++j) {
             float err = abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]);
             sum_err  += err / A.data[ELE_IDX(i, j, col)];
-            if((abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA) && miss_num < 20) {
+            if((abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA)) {
                 res = false;
                 miss_num += 1;
-                std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
+                //std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
             }
         }
     }
     //std::cout << "\ndelta:" << DELTA << std::endl;
-    //std::cout << "\ntotal mismatch:" << miss_num << std::endl;
+    std::cout << "\ntotal mismatch:" << miss_num << std::endl;
     std::cout << "\naverage error:" << sum_err / (row * col) << std::endl;
     return res;
 }

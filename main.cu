@@ -4,6 +4,7 @@
 #include "gemm_v3.cu"
 #include "gemm_v4.cu"
 #include "gemm_v5.cu"
+#include "gemm_v6.cu"
 #if defined(USE_CUBLAS)
     #include "ref_cublas.cu"
 #elif defined(USE_CUTLASS)
@@ -22,6 +23,25 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     //generate random value for A matrix
     GenRdVal4Mat(A);
     GenRdVal4Mat(B);
+
+    // debug
+    /*    printf("A:\n");
+        for (int32_t i = 0; i < 8; ++i) {
+            for (int32_t j = 0; j < 128; ++j) {
+                printf("%f,", A.data[ELE_IDX(i, j, k)]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+        printf("B:\n");
+        for (int32_t i = 0; i < 8; ++i) {
+            for (int32_t j = 0; j < 128; ++j) {
+                printf("%f,", B.data[ELE_IDX(i, j, n)]);
+            }
+            printf("\n");
+        }
+        printf("\n");   
+    */
     cudaError_t err = cudaSetDevice(1);
     if (err != cudaSuccess) {
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
@@ -88,6 +108,11 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     // =====v5=====
     dim3 dimBlock(128);
     dim3 dimGrid(32, 64);
+#elif K_VERSION == 6
+    // =====v6=====
+    dim3 dimBlock(128);
+    dim3 dimGrid(32, 64); // for gemm_v6
+    //dim3 dimGrid(64, 128); // for gemm_v6_1
 #endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
@@ -103,13 +128,15 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 5
         gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 6
+        gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
         cudaDeviceSynchronize();
     }
     // begin record time
     cudaEventRecord(start, 0);
     #pragma unroll
-    for (int32_t times = 0; times < 100; ++times) {
+    for (int32_t times = 0; times < RUNTIMES; ++times) {
 #if K_VERSION == 0
         gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 1
@@ -122,6 +149,8 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 5
         gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+#elif K_VERSION == 6
+        gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #endif
     }
     cudaEventRecord(stop, 0);
@@ -129,7 +158,7 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     cudaDeviceSynchronize();
     float ms_sum = 0;
     cudaEventElapsedTime(&ms_sum, start, stop);
-    float avg_ms = ms_sum / 100.0f;
+    float avg_ms = ms_sum / RUNTIMES;
     //memcpy to host
     err = cudaMemcpy(C.data, C_d, C_size, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess) {

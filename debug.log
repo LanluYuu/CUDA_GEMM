@@ -20,7 +20,7 @@ Created new 'build' directory
 -- Found CUDA: /usr/local/cuda (found version "12.1")
 -- cuda include dirs:/usr/local/cuda/include, ref_cublas.cu
 -- REF_TYPE:cublas
--- Configuring done (2.2s)
+-- Configuring done (2.3s)
 -- Generating done (0.0s)
 -- Build files have been written to: /root/haojiachen/code/Cuda_Learn/GEMM/build
 
@@ -36,15 +36,16 @@ cmake -DK_VERSION='5' -DREF_TYPE='cublas' -DSOURCE_FILE=gemm_v'5'.cu -B 'build' 
 
 init host matirx done
 device name:NVIDIA A100-SXM4-80GB
-cublasXXXXXX
 
-Cublas Execute time:7.528479ms
-Cublas Throuphput:18.255871TFLOPS
+Cublas Execute time:7.297884ms
+Cublas Throuphput:18.832712TFLOPS
+
+total mismatch:0
 
 average error:0
 
 result pass!
 
-Execute time:7.93243ms
-Throuphput:17.3262TFLOPS
+Execute time:7.78701ms
+Throuphput:17.6498TFLOPS
 

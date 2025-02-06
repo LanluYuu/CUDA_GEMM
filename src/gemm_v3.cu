@@ -3,7 +3,7 @@
 
 #define MAX_SHM_SIZE 32
 
-/*__global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+__global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
     constexpr int32_t eleNumPerThread = 4; // each thread read 4 data from Gmemory
     const int32_t times = k / MAX_SHM_SIZE;
     __shared__ float shm_A[2][MAX_SHM_SIZE * (MAX_SHM_SIZE + 1)]; // double buffer
@@ -80,7 +80,7 @@
         }
     }
     __syncthreads();
-}*/
+}
 
 __global__ void gemm_v3_1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) { // inherit form gemm_v2_1
 // each thread read 4 * 2 data from G_mem

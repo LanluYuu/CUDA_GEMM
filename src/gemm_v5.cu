@@ -1,20 +1,20 @@
 #include <cuda_runtime.h>
 #include "d_helper.cu"
 
-constexpr int32_t threadNums = 128;
-constexpr int32_t warpSize = 32;
-constexpr int32_t BM = 64;
-constexpr int32_t BN = 128;
-constexpr int32_t BK = 8;
-constexpr int32_t Trs = 4;
-constexpr int32_t wM = 32;
-constexpr int32_t wN = 64;
-constexpr int32_t wIterX = 2;
-constexpr int32_t wIterY = 2;
-constexpr int32_t TM = 4;
-constexpr int32_t TN = 4;
-
 __global__ void gemm_v5(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 17.6556TFLOPS
+    constexpr int32_t threadNums = 128;
+    constexpr int32_t BM = 64;
+    constexpr int32_t BN = 128;
+    constexpr int32_t BK = 8;
+    constexpr int32_t Trs = 4;
+    constexpr int32_t wM = 32;
+    constexpr int32_t wN = 64;
+    constexpr int32_t wIterX = 2;
+    constexpr int32_t wIterY = 2;
+    constexpr int32_t TM = 4;
+    constexpr int32_t TN = 4;
+    
     const int32_t bkx = blockIdx.x;
     const int32_t bky = blockIdx.y;
     const int32_t thx = threadIdx.x;
@@ -36,7 +36,6 @@ __global__ void gemm_v5(float* A, float* B, float* C, int32_t m, int32_t k, int3
     // read from G_mem    
     #pragma unroll 
     for (int32_t stride = 0; stride < k; stride += BK) {
-  
         float4 tmp = FLOAT4(A[ELE_IDX((start_row + thx * Trs / BK), (stride + thx * Trs % BK), k)]);
         shm_A[thx * Trs % BK + 0][thx * Trs / BK] = tmp.x;
         shm_A[thx * Trs % BK + 1][thx * Trs / BK] = tmp.y;
@@ -54,27 +53,21 @@ __global__ void gemm_v5(float* A, float* B, float* C, int32_t m, int32_t k, int3
         for (int32_t dotIdx = 0; dotIdx < BK; ++dotIdx) {
             #pragma unroll 
             for (int32_t i = 0; i < wIterY; ++i) {
-                #pragma unroll 
-                for (int32_t j = 0; j < TM; ++j) {
-                    reg_A[i * TM + j] = shm_A[dotIdx][wIdY * wM + i * wSubM + TM * thYinWarp + j];
-                }
+                FLOAT4(reg_A[i * TM]) = FLOAT4(shm_A[dotIdx][wIdY * wM + i * wSubM + TM * thYinWarp]);
             }
             #pragma unroll 
             for (int32_t i = 0; i < wIterX; ++i) {
-                #pragma unroll 
-                for (int32_t j = 0; j < TN; ++j) {
-                    reg_B[i * TN + j] = shm_B[dotIdx][wIdX * wN + i * wSubN + TN * thXinWarp + j];
-                }
+                FLOAT4(reg_B[i * TN]) = FLOAT4(shm_B[dotIdx][wIdX * wN + i * wSubN + TN * thXinWarp]); 
             }
             #pragma unroll 
-            for (int32_t x = 0; x < wIterX; ++x) {
+            for (int32_t y = 0; y < wIterY; ++y) {
                 #pragma unroll 
-                for (int32_t y = 0; y < wIterY; ++y) {
+                for (int32_t x = 0; x < wIterX; ++x) {
                     #pragma unroll 
                     for (int32_t i = 0; i < TM; ++i) {
                         #pragma unroll 
                         for (int32_t j = 0; j < TN; ++j) {
-                            res[x * TM + i][y * TN + j] += reg_A[x * TM + i] * reg_B[y * TN + j];
+                            res[y * TM + i][x * TN + j] += reg_A[y * TM + i] * reg_B[x * TN + j];
                         }
                     }
                 }
@@ -85,9 +78,9 @@ __global__ void gemm_v5(float* A, float* B, float* C, int32_t m, int32_t k, int3
     // store to G_mem
     int32_t C_row; int32_t C_col;
     #pragma unroll 
-    for (int32_t x = 0; x < wIterX; ++x) {
+    for (int32_t y = 0; y < wIterY; ++y) {
         #pragma unroll 
-        for (int32_t y = 0; y < wIterY; ++y) {
+        for (int32_t x = 0; x < wIterX; ++x) {
             #pragma unroll 
             for (int32_t i = 0; i < TM; ++i) {
                 C_row = start_row + wIdY * wM + y * wSubM + thYinWarp * TM + i;

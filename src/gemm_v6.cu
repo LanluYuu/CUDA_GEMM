@@ -3,6 +3,7 @@
 #include "d_helper.cu"
 
 __global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) { 
+    // 17.7359TFLOPS
     constexpr int32_t threadNums = 128;
     constexpr int32_t BM = 64;
     constexpr int32_t BN = 128;
@@ -50,22 +51,8 @@ __global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int3
     // read from G_mem    
     #pragma unroll 
     for (int32_t stride = BK; stride < k + 1; stride += BK) {
-        // load next stage data from G_mem to S_mem
         int32_t preShmStage = shm_stage;
         shm_stage = (shm_stage + 1) % 2;
-        if (stride < k) {
-            tmp = FLOAT4(A[ELE_IDX((start_row + thx * Trs / BK), (stride + thx * Trs % BK), k)]);
-            shm_A[shm_stage][thx * Trs % BK + 0][thx * Trs / BK] = tmp.x;
-            shm_A[shm_stage][thx * Trs % BK + 1][thx * Trs / BK] = tmp.y;
-            shm_A[shm_stage][thx * Trs % BK + 2][thx * Trs / BK] = tmp.z;
-            shm_A[shm_stage][thx * Trs % BK + 3][thx * Trs / BK] = tmp.w;
-
-            #pragma unroll 
-            for (int32_t offset = 0; offset < BK; offset += BstrideY) {
-                FLOAT4(shm_B[shm_stage][thx * Trs / BN + offset][thx * Trs % BN]) = FLOAT4(B[ELE_IDX((stride + thx * Trs / BN + offset), (start_col + thx * Trs % BN), n)]);
-            }
-        }
-
         // read dotIdx=0 to register
         #pragma unroll
         for (int32_t i = 0; i < wIterX; ++i) {
@@ -83,7 +70,20 @@ __global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int3
             //     reg_A[reg_stage][i * TM + j] = shm_A[preShmStage][0][wIdY * wM + i * wSubM + TM * thYinWarp + j];
             // }
         }
-        __syncthreads();
+        //__syncthreads();
+        // load next stage data from G_mem to S_mem
+        if (stride < k) {
+            tmp = FLOAT4(A[ELE_IDX((start_row + thx * Trs / BK), (stride + thx * Trs % BK), k)]);
+            shm_A[shm_stage][thx * Trs % BK + 0][thx * Trs / BK] = tmp.x;
+            shm_A[shm_stage][thx * Trs % BK + 1][thx * Trs / BK] = tmp.y;
+            shm_A[shm_stage][thx * Trs % BK + 2][thx * Trs / BK] = tmp.z;
+            shm_A[shm_stage][thx * Trs % BK + 3][thx * Trs / BK] = tmp.w;
+
+            #pragma unroll 
+            for (int32_t offset = 0; offset < BK; offset += BstrideY) {
+                FLOAT4(shm_B[shm_stage][thx * Trs / BN + offset][thx * Trs % BN]) = FLOAT4(B[ELE_IDX((stride + thx * Trs / BN + offset), (start_col + thx * Trs % BN), n)]);
+            }
+        }
 
         #pragma unroll 
         for (int32_t dotIdx = 1;  dotIdx < BK + 1; ++dotIdx) {
@@ -121,7 +121,7 @@ __global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int3
                     }
                 }
             }
-            __syncthreads();
+            //__syncthreads();
         }
         __syncthreads();
     }

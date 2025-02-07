@@ -1,6 +1,7 @@
 #include "d_helper.cu"
 
 __global__ void gemm_v0(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 3.06806TFLOPS
     int32_t row = blockIdx.y * blockDim.y + threadIdx.y;
     int32_t col = blockIdx.x * blockDim.x + threadIdx.x;
     float res = 0.0f;

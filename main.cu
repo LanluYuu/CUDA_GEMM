@@ -24,24 +24,6 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     GenRdVal4Mat(A);
     GenRdVal4Mat(B);
 
-    // debug
-    /*    printf("A:\n");
-        for (int32_t i = 0; i < 8; ++i) {
-            for (int32_t j = 0; j < 128; ++j) {
-                printf("%f,", A.data[ELE_IDX(i, j, k)]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        printf("B:\n");
-        for (int32_t i = 0; i < 8; ++i) {
-            for (int32_t j = 0; j < 128; ++j) {
-                printf("%f,", B.data[ELE_IDX(i, j, n)]);
-            }
-            printf("\n");
-        }
-        printf("\n");   
-    */
     cudaError_t err = cudaSetDevice(1);
     if (err != cudaSuccess) {
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
@@ -89,17 +71,22 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
 #elif K_VERSION == 1
     // =====v1=====
-    dim3 dimBlock(32, 32); //set threads per block
-    dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
+    dim3 dimBlock(32, 32);
+    dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
 #elif K_VERSION == 2
+    // =====v2=====
+    dim3 dimBlock(32, 32);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
     // =====v2.1=====
-    dim3 dimBlock(64, 8); //set threads per block
-    dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
+    // dim3 dimBlock(64, 8); 
+    // dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
 #elif K_VERSION == 3
     // =====v3=====
     dim3 dimBlock(16, 16);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 4, ((n - 1) / dimBlock.y + 1) / 4);
-    //dim3 dimGrid(1, 1);
+    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+    // =====v3_1=====
+    // dim3 dimBlock(16, 16);
+    // dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 4, ((n - 1) / dimBlock.y + 1) / 4);
 #elif K_VERSION == 4
     // =====v4====
     dim3 dimBlock(16, 16);
@@ -111,8 +98,10 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 #elif K_VERSION == 6
     // =====v6=====
     dim3 dimBlock(128);
-    dim3 dimGrid(32, 64); // for gemm_v6
-    //dim3 dimGrid(64, 128); // for gemm_v6_1
+    dim3 dimGrid(32, 64); 
+    // =====v6_1=====
+    // dim3 dimBlock(128);
+    // dim3 dimGrid(64, 128);
 #endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
@@ -121,9 +110,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 #elif K_VERSION == 1
         gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 2
-        gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 3
-        gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 4
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 5
@@ -142,9 +131,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 #elif K_VERSION == 1
         gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 2
-        gemm_v2_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 3
-        gemm_v3_1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 4
         gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
 #elif K_VERSION == 5

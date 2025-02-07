@@ -9,7 +9,7 @@ __host__ bool computeGoldenBlas(float* A, float* B, float* C, float* C_ref, int3
         printf("\ncublas handle create fail!\n");
         return false;
     }
-    //cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH);
+    cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH);
     float alpha = 1.0f;
     float beta  = 0.0f;
 

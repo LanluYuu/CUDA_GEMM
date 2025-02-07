@@ -4,6 +4,7 @@
 #define MAX_SHM_SIZE 64
 
 __global__ void gemm_v2(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 10.6003TFLOPS
     constexpr int32_t read_per_thread = 2; //each thread read 16 data
     const int32_t loop_times = k / MAX_SHM_SIZE; //each block read and calculate 4096/64=64 times
     __shared__ float shm_A[MAX_SHM_SIZE][MAX_SHM_SIZE]; 
@@ -60,6 +61,7 @@ __global__ void gemm_v2(float* A, float* B, float* C, int32_t m, int32_t k, int3
 
 // block(8 x 64), each thread calculate 8 results
 __global__ void gemm_v2_1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 10.1804TFLOPS
     const int32_t TM = 8; // each thread is responsible for 8x1 vector res
     const int32_t BM = 64;
     const int32_t bkx = blockIdx.x;

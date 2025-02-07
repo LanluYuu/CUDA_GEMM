@@ -4,6 +4,7 @@
 #define MAX_SHM_SIZE 32
 
 __global__ void gemm_v1(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 5.39072TFLOPS
     __shared__ float shm_A[MAX_SHM_SIZE * MAX_SHM_SIZE];
     __shared__ float shm_B[MAX_SHM_SIZE * MAX_SHM_SIZE];
     int32_t bkx = blockIdx.x;

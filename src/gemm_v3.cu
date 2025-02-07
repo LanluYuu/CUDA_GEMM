@@ -4,6 +4,7 @@
 #define MAX_SHM_SIZE 32
 
 __global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n) {
+    // 4.57716TFLOPS
     constexpr int32_t eleNumPerThread = 4; // each thread read 4 data from Gmemory
     const int32_t times = k / MAX_SHM_SIZE;
     __shared__ float shm_A[2][MAX_SHM_SIZE * (MAX_SHM_SIZE + 1)]; // double buffer
@@ -52,7 +53,7 @@ __global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int3
                     shm_B[next_stage][ELE_IDX(shm_row, shm_col + j, (MAX_SHM_SIZE + 1))] = B[ELE_IDX(B_row, B_col + j, n)];
             }
         }
-        __syncthreads();
+       
         // read to next stage done, now calculate
         #pragma unroll
         for (int32_t x = 0; x < 2; ++x) {
@@ -65,6 +66,7 @@ __global__ void gemm_v3(float* A, float* B, float* C, int32_t m, int32_t k, int3
                 }
             }
         }
+        __syncthreads();
         stage = next_stage;
     }
     

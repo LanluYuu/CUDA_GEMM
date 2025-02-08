@@ -11,13 +11,14 @@
 #define WARMUPT 10
 #define RUNTIMES 100
 
+template<typename T>
 struct Matrix {
     int32_t height;
     int32_t width;
-    float* data; 
+    T* data; 
 
     Matrix(int32_t h, int32_t w) : height(h), width(w) {
-        data = new float[h*w];
+        data = new T[h*w];
         if (!data) {
             throw std::runtime_error("\nhost data allocate fail!\n");
         }
@@ -29,8 +30,8 @@ struct Matrix {
 };
 
 //host function
-
-float Get_Matrix_Element(const Matrix& X, int32_t row, int32_t col) {
+template<typename T>
+float Get_Matrix_Element(const Matrix<T>& X, int32_t row, int32_t col) {
     if (row < X.height && col < X.width) {
         return X.data[row * X.width + col];
     } else {
@@ -40,11 +41,21 @@ float Get_Matrix_Element(const Matrix& X, int32_t row, int32_t col) {
     return 0.0f;
 }
 
-void Set_Matrix_Element(Matrix& X, int32_t row, int32_t col, float val) {
-    if (row < X.height && col < X.width) {
-        X.data[row * X.width + col] = val;
-    } else {
-        std::cout<<"set matrix element unvalid index!"<<std::endl;
+template<typename T>
+void Set_Matrix_Element(Matrix<T>& X, int32_t row, int32_t col, float val) {
+    size_t size = sizeof(T);
+    if (size == 2) {
+        if (row < X.height && col < X.width) {
+        X.data[row * X.width + col] = __float2half(val);
+        } else {
+            std::cout<<"set matrix element unvalid index!"<<std::endl;
+        }
+    } else if(size == 4) {
+        if (row < X.height && col < X.width) {
+            X.data[row * X.width + col] = val;
+        } else {
+            std::cout<<"set matrix element unvalid index!"<<std::endl;
+        }
     }
 
     return;
@@ -57,8 +68,8 @@ void Set_Matrix_Element(Matrix& X, int32_t row, int32_t col, float val) {
 
     return dis(gen); 
 }*/
-
-bool GenRdVal4Mat(Matrix& X) {
+template<typename T>
+bool GenRdVal4Mat(Matrix<T>& X) {
     if (!X.data) {
         throw std::runtime_error("matrix X is not allocated!\n");
         return false;
@@ -76,8 +87,9 @@ bool GenRdVal4Mat(Matrix& X) {
     return true;
 }
 
-void ComputeGolden(const Matrix& A, const Matrix& B, Matrix& C) {
-    memset(C.data, 0, C.height * C.width * sizeof(float));
+template<typename T>
+void ComputeGolden(const Matrix<T>& A, const Matrix<T>& B, Matrix<T>& C) {
+    memset(C.data, 0, C.height * C.width * sizeof(T));
     for (int32_t i = 0; i < A.width; ++i) {
         for (int32_t row = 0; row < A.height; ++row) {
             for (int32_t col = 0; col < B.width; ++col) {
@@ -89,17 +101,37 @@ void ComputeGolden(const Matrix& A, const Matrix& B, Matrix& C) {
     return;
 }
 
-bool CompareMat(const Matrix& A, const Matrix& B) {
+template<typename T>
+bool CompareMat(const Matrix<T>& A, const Matrix<T>& B) {
     bool res = true;
+    bool isHalf;
+    if (sizeof(A.data[0]) == 2) {
+        isHalf = true;
+    } else if(sizeof(A.data[0]) == 4) {
+        isHalf = false;
+    } else {
+        printf("Compare Mat DataType not allowed!\n");
+        return false;
+    }
+
     int32_t row = A.height;
     int32_t col = A.width;
     int32_t miss_num = 0;
     float sum_err = 0.0f;    
     for (int32_t i = 0; i < row; ++i) {
         for(int32_t j = 0; j < col; ++j) {
-            float err = abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]);
-            sum_err  += err / A.data[ELE_IDX(i, j, col)];
-            if((abs(A.data[ELE_IDX(i, j, col)] - B.data[ELE_IDX(i, j, col)]) > DELTA)) {
+            float A_tmp;
+            float B_tmp;
+            if (isHalf) {
+                A_tmp = __half2float(A.data[ELE_IDX(i, j, col)]);
+                B_tmp = __half2float(B.data[ELE_IDX(i, j, col)]);
+            } else {
+                A_tmp = A.data[ELE_IDX(i, j, col)];
+                B_tmp = B.data[ELE_IDX(i, j, col)];
+            }
+            float err = abs(A_tmp - B_tmp);
+            sum_err  += err / A_tmp;
+            if(err > DELTA) {
                 res = false;
                 miss_num += 1;
                 //std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];

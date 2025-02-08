@@ -23,9 +23,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', type=int, help="gemm version")
     parser.add_argument('--ref', type=str, help="ref type, cublas/cutlass")
+    parser.add_argument('--dt', type=str, help="data type")
     args = parser.parse_args()
     print(f"Gemm version:{args.version}")
     print(f"Reference:{args.ref}")
+    print(f"Data Type:{args.dt}")
 
     # s0:remove build 
     build_dir = "build"
@@ -38,8 +40,8 @@ def main():
     print(f"Created new '{build_dir}' directory")
 
     # s2:run cmake to gen Makefile
-    run_command(f"cmake -DK_VERSION='{args.version}' -DREF_TYPE='{args.ref}' -DSOURCE_FILE=gemm_v'{args.version}'.cu -B '{build_dir}' .")
-    print(f"cmake -DK_VERSION='{args.version}' -DREF_TYPE='{args.ref}' -DSOURCE_FILE=gemm_v'{args.version}'.cu -B '{build_dir}' .")
+    run_command(f"cmake -DK_VERSION='{args.version}' -DREF_TYPE='{args.ref}' -DDATA_TYPE='{args.dt}' -DSOURCE_FILE=gemm_v{args.version}.cu -B '{build_dir}' .")
+    print(f"cmake -DK_VERSION='{args.version}' -DREF_TYPE='{args.ref}' -DDATA_TYPE='{args.dt}' -DSOURCE_FILE=gemm_v{args.version}.cu -B '{build_dir}' .")
     with change_directory(build_dir):
         run_command("make")
         run_command("./main")

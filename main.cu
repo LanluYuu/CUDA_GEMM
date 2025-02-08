@@ -1,10 +1,3 @@
-#include "gemm_v0.cu"
-#include "gemm_v1.cu"
-#include "gemm_v2.cu"
-#include "gemm_v3.cu"
-#include "gemm_v4.cu"
-#include "gemm_v5.cu"
-#include "gemm_v6.cu"
 #if defined(USE_CUBLAS)
     #include "ref_cublas.cu"
 #elif defined(USE_CUTLASS)
@@ -12,13 +5,18 @@
 #endif
 #include "helper.h"
 
+
+__global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n);
+__global__ void gemm_v0(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
+
 //host code
-void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
+template<typename T> // data type
+void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
     //init Matrix
-    Matrix A(m, k);
-    Matrix B(k, n);
-    Matrix C(m, n);
-    Matrix C_ref(m, n);
+    Matrix<T> A(m, k);
+    Matrix<T> B(k, n);
+    Matrix<T> C(m, n);
+    Matrix<T> C_ref(m, n);
     printf("init host matirx done\n");
     //generate random value for A matrix
     GenRdVal4Mat(A);
@@ -35,10 +33,10 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
     std::cout << "device name:" << prop.name << std::endl;
 
     //init Matrix on device
-    float *A_d; float *B_d; float *C_d; float *C_d_ref;
-    size_t A_size = m * k * sizeof(float);
-    size_t B_size = k * n * sizeof(float);
-    size_t C_size = m * n * sizeof(float);
+    T *A_d; T *B_d; T *C_d; T *C_d_ref;
+    size_t A_size = m * k * sizeof(T);
+    size_t B_size = k * n * sizeof(T);
+    size_t C_size = m * n * sizeof(T);
     cudaMalloc(&A_d, A_size);
     cudaMalloc(&B_d, B_size);
     cudaMalloc(&C_d, C_size);
@@ -53,95 +51,121 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
         std::cerr << "cudaMemcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
     //compute golden using cublas or cutlass
-    //std::cout << "main:::" << REF_TYPE << std::endl;E
 #if defined(USE_CUBLAS)
-    computeGoldenBlas(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
+    #if defined(USE_FP16)
+        computeGoldenBlasFp16(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
+    #elif defined(USE_FP32)
+        computeGoldenBlasFp32(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
+    #endif
 #elif defined(USE_CUTLASS)
     computeGoldenCutlass(A_d, B_d, C_d_ref, C_ref.data, m, k, n);
 #else 
-    std::cerr << "which reference not defined!" << std::endl;
+    std::cerr << "reference function not defined!" << std::endl;
 #endif
     //invoke kernel
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    // =====v0=====
-#if K_VERSION == 0
-    dim3 dimBlock(32, 32); //set threads per block
-    dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
-#elif K_VERSION == 1
-    // =====v1=====
-    dim3 dimBlock(32, 32);
-    dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
-#elif K_VERSION == 2
-    // =====v2=====
-    dim3 dimBlock(32, 32);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
-    // =====v2.1=====
-    // dim3 dimBlock(64, 8); 
-    // dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
-#elif K_VERSION == 3
-    // =====v3=====
-    dim3 dimBlock(16, 16);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
-    // =====v3_1=====
-    // dim3 dimBlock(16, 16);
-    // dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 4, ((n - 1) / dimBlock.y + 1) / 4);
-#elif K_VERSION == 4
-    // =====v4====
-    dim3 dimBlock(16, 16);
-    dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
-#elif K_VERSION == 5
-    // =====v5=====
-    dim3 dimBlock(128);
-    dim3 dimGrid(32, 64);
-#elif K_VERSION == 6
-    // =====v6=====
-    dim3 dimBlock(128);
-    dim3 dimGrid(32, 64); 
-    // =====v6_1=====
-    // dim3 dimBlock(128);
-    // dim3 dimGrid(64, 128);
-#endif
+#if defined(USE_FP32)
+        // =====v0=====
+    #if K_VERSION == 0
+        dim3 dimBlock(32, 32); //set threads per block
+        dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
+    #elif K_VERSION == 1
+        // =====v1=====
+        dim3 dimBlock(32, 32);
+        dim3 dimGrid((m - 1) / dimBlock.x + 1, (n - 1) / dimBlock.y + 1);
+    #elif K_VERSION == 2
+        // =====v2=====
+        dim3 dimBlock(32, 32);
+        dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+        // =====v2.1=====
+        // dim3 dimBlock(64, 8); 
+        // dim3 dimGrid((m - 1) / dimBlock.x + 1, ((n - 1) / dimBlock.y + 1) / 8);
+    #elif K_VERSION == 3
+        // =====v3=====
+        dim3 dimBlock(16, 16);
+        dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 2, ((n - 1) / dimBlock.y + 1) / 2);
+        // =====v3_1=====
+        // dim3 dimBlock(16, 16);
+        // dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 4, ((n - 1) / dimBlock.y + 1) / 4);
+    #elif K_VERSION == 4
+        // =====v4====
+        dim3 dimBlock(16, 16);
+        dim3 dimGrid(((m - 1) / dimBlock.x + 1) / 8, ((n - 1) / dimBlock.y + 1) / 8);
+    #elif K_VERSION == 5
+        // =====v5=====
+        dim3 dimBlock(128);
+        dim3 dimGrid(32, 64);
+    #elif K_VERSION == 6
+        // =====v6=====
+        dim3 dimBlock(128);
+        dim3 dimGrid(32, 64); 
+        // =====v6_1=====
+        // dim3 dimBlock(128);
+        // dim3 dimGrid(64, 128);
+    #endif
+
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
-#if K_VERSION == 0
-        gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 1
-        gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 2
-        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 3
-        gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 4
-        gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 5
-        gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 6
-        gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #if K_VERSION == 0
+                gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 1
+                gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 2
+                gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 3
+                gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 4
+                gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 5
+                gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 6
+                gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #endif
+            cudaDeviceSynchronize();
+        }
+        // begin record time
+        cudaEventRecord(start, 0);
+        #pragma unroll
+        for (int32_t times = 0; times < RUNTIMES; ++times) {
+        #if K_VERSION == 0
+            gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 1
+            gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 2
+            gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 3
+            gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 4
+            gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 5
+            gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 6
+            gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #endif
+        }
+#elif defined(USE_FP16)
+    #if K_VERSION == 0
+        dim3 dimBlock(128);
+        dim3 dimGrid(n / 32, m / 32);
+    #endif
+    //warm up for 10times
+    for (int32_t i = 0; i < WARMUPT; ++i) {
+        #if K_VERSION == 0
+                gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #endif
+            cudaDeviceSynchronize();
+        }
+        // begin record time
+        cudaEventRecord(start, 0);
+        #pragma unroll
+        for (int32_t times = 0; times < RUNTIMES; ++times) {
+        #if K_VERSION == 0
+            gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #endif
+        }
 #endif
-        cudaDeviceSynchronize();
-    }
-    // begin record time
-    cudaEventRecord(start, 0);
-    #pragma unroll
-    for (int32_t times = 0; times < RUNTIMES; ++times) {
-#if K_VERSION == 0
-        gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 1
-        gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 2
-        gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 3
-        gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 4
-        gemm_v4<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 5
-        gemm_v5<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#elif K_VERSION == 6
-        gemm_v6<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
-#endif
-    }
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaDeviceSynchronize();
@@ -173,5 +197,9 @@ void MatMul(int32_t m, int32_t k, int32_t n) { //Matirx A(m, k) * B(k, n)
 }
 
 int main() {
-    MatMul(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+#if defined(USE_FP16)
+    MatMul(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, __float2half(1.0f));
+#elif defined(USE_FP32)
+    MatMul(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, 1.0f);
+#endif
 }

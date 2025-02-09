@@ -4,6 +4,7 @@
 using namespace nvcuda;
 
 __global__ void gemm_v0(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n) {
+    // 17.9647TFLOPS
     constexpr int32_t warpNumX = 2;
     constexpr int32_t warpNumY = 2;
     constexpr int32_t wM = 16;

@@ -131,10 +131,14 @@ bool CompareMat(const Matrix<T>& A, const Matrix<T>& B) {
             }
             float err = abs(A_tmp - B_tmp);
             sum_err  += err / A_tmp;
-            if(err > DELTA) {
+            // if (i < 20 && j < 10) {
+            //     printf("Btmp:%f, Atmp:%f\n", B_tmp, A_tmp);
+            // }
+            if(err > DELTA && miss_num < 50) {
                 res = false;
                 miss_num += 1;
-                //std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B.data[ELE_IDX(i, j, col)] << ", got:" << A.data[ELE_IDX(i, j, col)];
+                //printf("Btmp:%f, Atmp:%f\n", B_tmp, A_tmp);
+                std::cout <<"\nMismatch, row:" << i << ", col: " << j << ", expected:" << B_tmp << ", got:" << A_tmp;
             }
         }
     }

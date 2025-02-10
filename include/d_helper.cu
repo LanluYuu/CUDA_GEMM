@@ -25,6 +25,25 @@ struct half8 {
         x(_x), y(_y), z(_z), w(_w), a(_a), b(_b), c(_c), d(_d) {};
 };
 
+
+inline __device__ void cp_async_global_to_shared(const uint32_t dst, const int32_t* src) {
+    asm volatile (
+        "cp.async.ca.shared.global.L2::128B [%0], [%1], 16;\n"
+        :: "r"(dst), "l"(src)
+    );
+};
+
+inline __device__ void cp_async_commit_group() {
+    asm volatile (
+        "cp.async.commit_group;\n"
+    );
+};
+
+inline __device__ void cp_async_wait_group0() {
+    asm volatile (
+        "cp.async.wait_group 0;\n" 
+    );
+}
 // struct d_Matrix { 
 //     int32_t height;
 //     int32_t width;

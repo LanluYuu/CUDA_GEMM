@@ -9,6 +9,7 @@
 __global__ void gemm_v6(float* A, float* B, float* C, int32_t m, int32_t k, int32_t n);
 __global__ void gemm_v0(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
 __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
+__global__ void gemm_v2(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
 
 //host code
 template<typename T> // data type
@@ -153,6 +154,9 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
     #elif K_VERSION == 1
         dim3 dimBlock(256);
         dim3 dimGrid(n / 128, m / 256);
+    #elif K_VERSION == 2
+        dim3 dimBlock(256);
+        dim3 dimGrid(n / 128, m / 256);
     #endif
     //warm up for 10times
     for (int32_t i = 0; i < WARMUPT; ++i) {
@@ -160,6 +164,8 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
             gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #elif K_VERSION == 1
             gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 2
+            gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #endif
             cudaDeviceSynchronize();
         }
@@ -170,8 +176,9 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
         #if K_VERSION == 0
             gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #elif K_VERSION == 1
-            //printf("here~\n");
             gemm_v1<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 2
+            gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #endif
         }
 #endif

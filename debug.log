@@ -1,4 +1,4 @@
-Gemm version:1
+Gemm version:2
 Reference:cublas
 Data Type:fp16
 Removed exsiting 'build' directory
@@ -20,14 +20,14 @@ Created new 'build' directory
 -- Found Threads: TRUE
 -- Found CUDA: /usr/local/cuda (found version "12.1")
 -- cuda include dirs:/usr/local/cuda/include, ref_cublas.cu
--- Configuring done (2.2s)
+-- Configuring done (2.3s)
 -- Generating done (0.0s)
 -- Build files have been written to: /root/haojiachen/code/Cuda_Learn/GEMM/build
 
-cmake -DK_VERSION='1' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_v1.cu -B 'build' .
+cmake -DK_VERSION='2' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_v2.cu -B 'build' .
 [ 16%] Building CUDA object CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o
 [ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/ref/ref_cublas.cu.o
-[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/fp16/gemm_v1.cu.o
+[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/fp16/gemm_v2.cu.o
 [ 66%] Linking CUDA static library libcudaMatMul.a
 [ 66%] Built target cudaMatMul
 [ 83%] Building CUDA object CMakeFiles/main.dir/main.cu.o
@@ -37,65 +37,65 @@ cmake -DK_VERSION='1' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_
 init host matirx done
 device name:NVIDIA A100-SXM4-80GB
 
-Cublas Execute time:0.615250ms
-Cublas Throuphput:223.387175TFLOPS
+Cublas Execute time:0.617810ms
+Cublas Throuphput:222.461543TFLOPS
 
-Mismatch, row:16, col: 128, expected:1012, got:1012.5
-Mismatch, row:16, col: 131, expected:1014, got:1014.5
-Mismatch, row:16, col: 132, expected:1011, got:1011.5
-Mismatch, row:16, col: 134, expected:1027, got:1026
-Mismatch, row:16, col: 141, expected:1023, got:1022.5
-Mismatch, row:16, col: 142, expected:1005, got:1004.5
-Mismatch, row:16, col: 143, expected:1022.5, got:1022
-Mismatch, row:16, col: 147, expected:1010, got:1009.5
-Mismatch, row:16, col: 149, expected:994, got:993.5
-Mismatch, row:16, col: 152, expected:1010, got:1009.5
-Mismatch, row:16, col: 154, expected:1021.5, got:1021
-Mismatch, row:16, col: 155, expected:1003, got:1002.5
-Mismatch, row:16, col: 156, expected:1009, got:1008
-Mismatch, row:16, col: 158, expected:1007, got:1006.5
-Mismatch, row:16, col: 160, expected:1012, got:1012.5
-Mismatch, row:16, col: 163, expected:1012, got:1012.5
-Mismatch, row:16, col: 164, expected:1008.5, got:1008
-Mismatch, row:16, col: 166, expected:1021, got:1020.5
-Mismatch, row:16, col: 168, expected:1021.5, got:1021
-Mismatch, row:16, col: 169, expected:1011.5, got:1011
-Mismatch, row:16, col: 172, expected:1018.5, got:1019
-Mismatch, row:16, col: 174, expected:1007, got:1006.5
-Mismatch, row:16, col: 175, expected:1014, got:1014.5
-Mismatch, row:16, col: 181, expected:1001.5, got:1001
-Mismatch, row:16, col: 184, expected:1017.5, got:1018
-Mismatch, row:16, col: 191, expected:1006.5, got:1006
-Mismatch, row:16, col: 2177, expected:1013.5, got:1014
-Mismatch, row:16, col: 2179, expected:1010.5, got:1011
-Mismatch, row:16, col: 2183, expected:1004, got:1004.5
-Mismatch, row:16, col: 2184, expected:1010, got:1010.5
-Mismatch, row:16, col: 2187, expected:1012.5, got:1013
-Mismatch, row:16, col: 2192, expected:1023.5, got:1024
-Mismatch, row:16, col: 2195, expected:1007.5, got:1008
-Mismatch, row:16, col: 2197, expected:1020.5, got:1021
-Mismatch, row:16, col: 2202, expected:1028, got:1029
-Mismatch, row:16, col: 2204, expected:1012, got:1012.5
-Mismatch, row:16, col: 2205, expected:996.5, got:997
-Mismatch, row:16, col: 2206, expected:1009, got:1009.5
-Mismatch, row:16, col: 2207, expected:1002, got:1002.5
-Mismatch, row:16, col: 2208, expected:1016.5, got:1017
-Mismatch, row:16, col: 2211, expected:1022, got:1022.5
-Mismatch, row:16, col: 2213, expected:1003.5, got:1004
-Mismatch, row:16, col: 2216, expected:989, got:989.5
-Mismatch, row:16, col: 2219, expected:1001, got:1001.5
-Mismatch, row:16, col: 2220, expected:1010, got:1010.5
-Mismatch, row:16, col: 2221, expected:1011.5, got:1012
-Mismatch, row:16, col: 2222, expected:1038, got:1039
-Mismatch, row:16, col: 2224, expected:1013, got:1013.5
-Mismatch, row:16, col: 2229, expected:1022.5, got:1023
-Mismatch, row:16, col: 2231, expected:1022.5, got:1023
+Mismatch, row:0, col: 1474, expected:1036, got:1035
+Mismatch, row:0, col: 1475, expected:1025, got:1024
+Mismatch, row:0, col: 1476, expected:1017, got:1017.5
+Mismatch, row:0, col: 1477, expected:1016, got:1016.5
+Mismatch, row:0, col: 1478, expected:1025, got:1024
+Mismatch, row:0, col: 1479, expected:1022, got:1022.5
+Mismatch, row:0, col: 1480, expected:1012, got:1011
+Mismatch, row:0, col: 1481, expected:1039, got:1038
+Mismatch, row:0, col: 1482, expected:1009, got:1009.5
+Mismatch, row:0, col: 1484, expected:1037, got:1036
+Mismatch, row:0, col: 1487, expected:1017, got:1017.5
+Mismatch, row:0, col: 1488, expected:1023.5, got:1023
+Mismatch, row:0, col: 1490, expected:1022.5, got:1021.5
+Mismatch, row:0, col: 1491, expected:1015, got:1014
+Mismatch, row:0, col: 1493, expected:1010.5, got:1011
+Mismatch, row:0, col: 1495, expected:1020, got:1020.5
+Mismatch, row:0, col: 1498, expected:1024, got:1023
+Mismatch, row:0, col: 1499, expected:1015.5, got:1015
+Mismatch, row:0, col: 1503, expected:998.5, got:998
+Mismatch, row:0, col: 1504, expected:1022.5, got:1022
+Mismatch, row:0, col: 1506, expected:1015.5, got:1015
+Mismatch, row:0, col: 1509, expected:1027, got:1028
+Mismatch, row:0, col: 1510, expected:1021.5, got:1021
+Mismatch, row:0, col: 1513, expected:1015, got:1015.5
+Mismatch, row:0, col: 1515, expected:1017, got:1016.5
+Mismatch, row:0, col: 1516, expected:1036, got:1035
+Mismatch, row:0, col: 1522, expected:1012.5, got:1011.5
+Mismatch, row:0, col: 1523, expected:1001.5, got:1002
+Mismatch, row:0, col: 1525, expected:1029, got:1028
+Mismatch, row:0, col: 1527, expected:999.5, got:999
+Mismatch, row:0, col: 1530, expected:1007, got:1006
+Mismatch, row:0, col: 1531, expected:1038, got:1037
+Mismatch, row:0, col: 1532, expected:1015.5, got:1015
+Mismatch, row:0, col: 1535, expected:1016.5, got:1016
+Mismatch, row:1, col: 1472, expected:1056, got:1057
+Mismatch, row:1, col: 1473, expected:1043, got:1045
+Mismatch, row:1, col: 1474, expected:1037, got:1039
+Mismatch, row:1, col: 1475, expected:1038, got:1040
+Mismatch, row:1, col: 1476, expected:1035, got:1036
+Mismatch, row:1, col: 1477, expected:1036, got:1037
+Mismatch, row:1, col: 1478, expected:1052, got:1054
+Mismatch, row:1, col: 1480, expected:1036, got:1037
+Mismatch, row:1, col: 1481, expected:1051, got:1053
+Mismatch, row:1, col: 1482, expected:1021.5, got:1023.5
+Mismatch, row:1, col: 1483, expected:1049, got:1050
+Mismatch, row:1, col: 1484, expected:1036, got:1038
+Mismatch, row:1, col: 1485, expected:1024, got:1025
+Mismatch, row:1, col: 1486, expected:1042, got:1043
+Mismatch, row:1, col: 1487, expected:1034, got:1036
+Mismatch, row:1, col: 1488, expected:1043, got:1044
 total mismatch:50
 
-average error:4.34322e-06
+average error:9.27694e-06
 
 compare fail!
 
-Execute time:4.97087ms
-Throuphput:27.6488TFLOPS
+Execute time:2.53775ms
+Throuphput:54.1578TFLOPS
 

@@ -3,10 +3,30 @@
 
 using namespace nvcuda;
 
-__global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n) {
-    // config:bM=256, bN=128, bK=32, wM=64, wN=64 : 33.2677TFLOPS
-    // config:bM=256, bN=128, bK=16, wM=64, wN=64 : 27.6488TFLOPS
-    // config:bM=128, bN=64, bK=16, wM=32, wN=32 : 18.5681TFLOPS
+// #define ELE_IDX(x, y, col) (x * col + y)
+
+// inline __device__ void cp_async_global_to_shared(void *dst, const void *src, int size) {
+//     asm volatile (
+//         "cp.async.ca.shared.global [%0], [%1], %2;\n"
+//         :: "l"(dst), "l"(src), "r"(size)
+//     );
+// };
+
+// inline __device__ void cp_async_commit_group() {
+//     asm volatile (
+//         "cp.async.commit_group;\n"
+//     );
+// };
+
+// inline __device__ void cp_async_wait_group(int N) {
+//     asm volatile (
+//         "cp.async.wait_group %0;\n" 
+//         :: "r"(N)
+//     );
+// }
+
+__global__ void gemm_v2(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n) {
+    // 54.1578TFLOPS
     constexpr int32_t warpSize = 32;
     constexpr int32_t fragSize = 16;
     constexpr int32_t wM = 64; // each warp calculate 64x64 
@@ -21,8 +41,11 @@ __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t
     constexpr int32_t warpNumY = bM / wM;
     // constexpr int32_t rBNumPerThread = 16;
     // constexpr int32_t rANumPerThread = 32;
-    constexpr int32_t rNumPerThread = 8;
+    // constexpr int32_t rNumPerThread = 8;
     constexpr int32_t w_kStride = 16;
+    int32_t A_rd_times = bM * bK / (8 * blockDim.x);
+    int32_t B_rd_times = bK * bN / (8 * blockDim.x);
+    int32_t B_rd_rowsPerTime  = (8 * blockDim.x) / bN;
     const int32_t thx = threadIdx.x;
     const int32_t bkx = blockIdx.x;
     const int32_t bky = blockIdx.y;
@@ -32,10 +55,10 @@ __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t
 
     const int32_t c_start_row = warpIdy * wM;
     const int32_t c_start_col = warpIdx * wN;
-    const int32_t r_A_times = bM * bK / (rNumPerThread * blockDim.x);
-    const int32_t r_B_times = bK * bN / (rNumPerThread * blockDim.x);
-    const int32_t r_A_rowStride = rNumPerThread * blockDim.x / bK;
-    const int32_t r_B_rowStride = rNumPerThread * blockDim.x / bN;
+    // const int32_t r_A_times = bM * bK / (rNumPerThread * blockDim.x);
+    // const int32_t r_B_times = bK * bN / (rNumPerThread * blockDim.x);
+    // const int32_t r_A_rowStride = rNumPerThread * blockDim.x / bK;
+    // const int32_t r_B_rowStride = rNumPerThread * blockDim.x / bN;
     const int32_t st_start_row = bky * bM + c_start_row;
     const int32_t st_start_col = bkx * bN + c_start_col;
     __shared__ half shm_A[bM][bK]; // 256x32
@@ -52,38 +75,34 @@ __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t
             wmma::fill_fragment(frag_acc[fragRow][fragCol], 0.0f);
         }
     }
-    
+
     #pragma unroll
     for (int32_t k_stride = 0; k_stride < k; k_stride += bK) {
-        // read A to S_mem
-        // #pragma unroll
-        // for (int32_t i = 0; i < rANumPerThread; ++i) {
-        //     shm_A[rANumPerThread * thx / bK][rANumPerThread * thx % bK + i] = 
-        //         A[ELE_IDX((bM * bky + rANumPerThread * thx / bK), (k_stride + rANumPerThread * thx % bK + i), k)];
-        // }
-        // for (int32_t ArowOffset = 0; ArowOffset < bM; ArowOffset += rNumPerThread * blockDim.x / bK) {
-        //     HALF8(shm_A[rNumPerThread * thx / bK + ArowOffset][rNumPerThread * thx % bK]) = HALF8(A[ELE_IDX((bM * bky + rNumPerThread * thx / bK + ArowOffset), (k_stride + rNumPerThread * thx % bK), k)]);
-        // }
+        // 16B(8half) move per async
         #pragma unroll
-        for (int32_t r_A_time = 0; r_A_time < r_A_times; ++r_A_time) {
-            HALF8(shm_A[r_A_time * r_A_rowStride + rNumPerThread * thx / bK][rNumPerThread * thx % bK]) = 
-                HALF8(A[ELE_IDX((bM * bky + r_A_time * r_A_rowStride + rNumPerThread * thx / bK), (k_stride + rNumPerThread * thx % bK), k)]);
+        for (int32_t A_rd_time = 0; A_rd_time < A_rd_times; ++A_rd_time) {
+            size_t shm_A_Dst   = __cvta_generic_to_shared(&shm_A[thx][A_rd_time * 8]);
+            int32_t* glb_A_Src = (int32_t*)(&A[ELE_IDX((bky * bM + thx), (k_stride + A_rd_time * 8), k)]);
+            cp_async_global_to_shared(shm_A_Dst, glb_A_Src);
         }
-        #pragma unroll
-        for (int32_t r_B_time = 0; r_B_time < r_B_times; ++r_B_time) {
-            HALF8(shm_B[r_B_time * r_B_rowStride + rNumPerThread * thx / bN][rNumPerThread * thx % bN]) = 
-                HALF8(B[ELE_IDX((k_stride + r_B_time * r_B_rowStride + rNumPerThread * thx / bN), (bN * bkx + rNumPerThread * thx % bN), n)]);
+
+        for (int32_t B_rd_time = 0; B_rd_time < B_rd_times; ++B_rd_time) {
+            size_t shm_B_Dst   = __cvta_generic_to_shared(&shm_B[B_rd_rowsPerTime * B_rd_time + thx * 8 / bN][(thx * 8) % bN]);
+            int32_t* glb_B_Src = (int32_t*)(&B[ELE_IDX((k_stride + B_rd_rowsPerTime * B_rd_time + thx * 8 / bN), (bkx * bN + (thx * 8) % bN), n)]);
+            cp_async_global_to_shared(shm_B_Dst, glb_B_Src);
         }
-        __syncthreads();
-        // read B to S_mem
-        // #pragma unroll
-        // for (int32_t i = 0; i < rBNumPerThread; ++i) {
-        //     shm_B[rBNumPerThread * thx / bN][rBNumPerThread * thx % bN + i] = 
-        //         B[ELE_IDX((k_stride + rBNumPerThread * thx / bN), (bN * bkx + rBNumPerThread * thx % bN + i), n)];
-        // }
-        // HALF8(shm_B[rNumPerThread * thx / bN][rNumPerThread * thx % bN]) = HALF8(B[ELE_IDX((k_stride + rNumPerThread * thx / bN), (bN * bkx + rNumPerThread * thx % bN), n)]);
-        // HALF4(shm_B[rBNumPerThread * thx / bN][rBNumPerThread * thx % bN]) = 
-        //     HALF4(B[ELE_IDX((k_stride + rBNumPerThread * thx / bN), (bN * bkx + rBNumPerThread * thx % bN), n)]);
+        
+        // half *shm_A_Dst = &shm_A[0][0];
+        // half *glb_A_Src = &A[ELE_IDX((bky * bM), (k_stride), k)];
+        // int32_t mv_A_size = bM * bK * sizeof(half);
+        // cp_async_global_to_shared(shm_A_Dst, glb_A_Src, mv_A_size);
+        // half *shm_B_Dst = &shm_B[0][0];
+        // half *glb_B_Src = &B[ELE_IDX((k_stride), (bkx * bN), n)];
+        // int32_t mv_B_size = bK * bN * sizeof(half);
+        // cp_async_global_to_shared(shm_B_Dst, glb_B_Src, mv_B_size);
+
+        cp_async_commit_group();
+        cp_async_wait_group0();
         __syncthreads();
         #pragma unroll
         for (int32_t w_start_k = 0; w_start_k < bK; w_start_k += w_kStride) {
@@ -104,6 +123,7 @@ __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t
             }
         }
     }
+
     #pragma unroll
     for (int32_t fragRow = 0; fragRow < fragRows; ++fragRow) {
         #pragma unroll

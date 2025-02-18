@@ -11,6 +11,9 @@ __global__ void gemm_v0(half *A, half *B, half *C, int32_t m, int32_t k, int32_t
 __global__ void gemm_v1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
 __global__ void gemm_v2(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
 __global__ void gemm_v3(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
+__global__ void gemm_v4(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
+__global__ void gemm_v3_1(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
+__global__ void gemm_v3_2(half *A, half *B, half *C, int32_t m, int32_t k, int32_t n);
 
 //host code
 template<typename T> // data type
@@ -30,7 +33,7 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
         std::cerr << "\nInit device failed!\n" << cudaGetErrorString(err) << std::endl;
     }
     //set device 
-    cudaSetDevice(0);
+    cudaSetDevice(1);
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
     std::cout << "device name:" << prop.name << std::endl;
@@ -161,9 +164,14 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
     #elif K_VERSION == 3
         dim3 dimBlock(256);
         dim3 dimGrid(n / 128, m / 256);
+    #elif K_VERSION == 4
+        dim3 dimBlock(256);
+        dim3 dimGrid(n / 128, m / 256);
     #endif
     //warm up for 10times
-    for (int32_t i = 0; i < WARMUPT; ++i) {
+    uint32_t dsmem_v3 = (256 * 40 + 32 * 136) * sizeof(half);
+    uint32_t dsmem_v4 = 2 * (256 * 40 + 32 * 136) * sizeof(half);
+        for (int32_t i = 0; i < WARMUPT; ++i) {
         #if K_VERSION == 0
             gemm_v0<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #elif K_VERSION == 1
@@ -171,7 +179,12 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
         #elif K_VERSION == 2
             gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #elif K_VERSION == 3
-            gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+            // cudaFuncSetAttribute(gemm_v3_1, cudaFuncAttributeMaxDynamicSharedMemorySize, 98304);
+            // gemm_v3_2<<<dimGrid, dimBlock, dsmem_v3>>> (A_d, B_d, C_d, m, k, n);
+            gemm_v3_1<<<dimGrid, dimBlock, dsmem_v3>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 4
+            cudaFuncSetAttribute(gemm_v4, cudaFuncAttributeMaxDynamicSharedMemorySize, 98304);
+            gemm_v4<<<dimGrid, dimBlock, dsmem_v4>>> (A_d, B_d, C_d, m, k, n);
         #endif
             cudaDeviceSynchronize();
         }
@@ -186,7 +199,10 @@ void MatMul(int32_t m, int32_t k, int32_t n, T val) { //Matirx A(m, k) * B(k, n)
         #elif K_VERSION == 2
             gemm_v2<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
         #elif K_VERSION == 3
-            gemm_v3<<<dimGrid, dimBlock>>> (A_d, B_d, C_d, m, k, n);
+            gemm_v3_1<<<dimGrid, dimBlock, dsmem_v3>>> (A_d, B_d, C_d, m, k, n);
+            // gemm_v3_2<<<dimGrid, dimBlock, dsmem_v3>>> (A_d, B_d, C_d, m, k, n);
+        #elif K_VERSION == 4
+            gemm_v4<<<dimGrid, dimBlock, dsmem_v4>>> (A_d, B_d, C_d, m, k, n);
         #endif
         }
 #endif

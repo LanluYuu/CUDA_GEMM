@@ -1,4 +1,4 @@
-Gemm version:3
+Gemm version:4
 Reference:cublas
 Data Type:fp16
 Removed exsiting 'build' directory
@@ -24,10 +24,10 @@ Created new 'build' directory
 -- Generating done (0.0s)
 -- Build files have been written to: /root/haojiachen/code/Cuda_Learn/GEMM/build
 
-cmake -DK_VERSION='3' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_v3.cu -B 'build' .
+cmake -DK_VERSION='4' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_v4.cu -B 'build' .
 [ 16%] Building CUDA object CMakeFiles/cudaMatMul.dir/include/d_helper.cu.o
 [ 33%] Building CUDA object CMakeFiles/cudaMatMul.dir/ref/ref_cublas.cu.o
-[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/fp16/gemm_v3.cu.o
+[ 50%] Building CUDA object CMakeFiles/cudaMatMul.dir/src/fp16/gemm_v4.cu.o
 [ 66%] Linking CUDA static library libcudaMatMul.a
 [ 66%] Built target cudaMatMul
 [ 83%] Building CUDA object CMakeFiles/main.dir/main.cu.o
@@ -37,65 +37,15 @@ cmake -DK_VERSION='3' -DREF_TYPE='cublas' -DDATA_TYPE='fp16' -DSOURCE_FILE=gemm_
 init host matirx done
 device name:NVIDIA A100-SXM4-80GB
 
-Cublas Execute time:0.615270ms
-Cublas Throuphput:223.379757TFLOPS
+Cublas Execute time:0.615588ms
+Cublas Throuphput:223.264558TFLOPS
 
-Mismatch, row:176, col: 1153, expected:1004, got:1003.5
-Mismatch, row:176, col: 1155, expected:992, got:991.5
-Mismatch, row:176, col: 1156, expected:1017, got:1016
-Mismatch, row:176, col: 1157, expected:997, got:996.5
-Mismatch, row:176, col: 1158, expected:1019.5, got:1019
-Mismatch, row:176, col: 1159, expected:1005, got:1004.5
-Mismatch, row:176, col: 1160, expected:1004.5, got:1005
-Mismatch, row:176, col: 1161, expected:1009.5, got:1009
-Mismatch, row:176, col: 1163, expected:996, got:995.5
-Mismatch, row:176, col: 1164, expected:1008.5, got:1008
-Mismatch, row:176, col: 1165, expected:1002.5, got:1002
-Mismatch, row:176, col: 1166, expected:1017.5, got:1017
-Mismatch, row:176, col: 1170, expected:1012, got:1011.5
-Mismatch, row:176, col: 1172, expected:1012, got:1011.5
-Mismatch, row:176, col: 1175, expected:1009.5, got:1009
-Mismatch, row:176, col: 1177, expected:998, got:997.5
-Mismatch, row:176, col: 1180, expected:988.5, got:988
-Mismatch, row:176, col: 1181, expected:1005.5, got:1005
-Mismatch, row:176, col: 1182, expected:1004, got:1003.5
-Mismatch, row:176, col: 1183, expected:995.5, got:994.5
-Mismatch, row:176, col: 1184, expected:1005.5, got:1005
-Mismatch, row:176, col: 1185, expected:1005, got:1004.5
-Mismatch, row:176, col: 1187, expected:1011.5, got:1011
-Mismatch, row:176, col: 1188, expected:1010, got:1009.5
-Mismatch, row:176, col: 1190, expected:1010, got:1009.5
-Mismatch, row:176, col: 1191, expected:977, got:976.5
-Mismatch, row:176, col: 1192, expected:1008, got:1007.5
-Mismatch, row:176, col: 1194, expected:1008, got:1007.5
-Mismatch, row:176, col: 1195, expected:1016.5, got:1015.5
-Mismatch, row:176, col: 1196, expected:1006, got:1005.5
-Mismatch, row:176, col: 1197, expected:994.5, got:994
-Mismatch, row:176, col: 1198, expected:1016.5, got:1016
-Mismatch, row:176, col: 1200, expected:1000.5, got:1001
-Mismatch, row:176, col: 1204, expected:1016, got:1016.5
-Mismatch, row:176, col: 1207, expected:1007.5, got:1006.5
-Mismatch, row:176, col: 1208, expected:986.5, got:986
-Mismatch, row:176, col: 1210, expected:1001.5, got:1001
-Mismatch, row:176, col: 1211, expected:1003, got:1002.5
-Mismatch, row:176, col: 1212, expected:1005, got:1004.5
-Mismatch, row:176, col: 1213, expected:1015.5, got:1015
-Mismatch, row:176, col: 1214, expected:1014.5, got:1013.5
-Mismatch, row:176, col: 1215, expected:986, got:985.5
-Mismatch, row:177, col: 1155, expected:1040, got:1039
-Mismatch, row:177, col: 1156, expected:1054, got:1055
-Mismatch, row:177, col: 1161, expected:1041, got:1042
-Mismatch, row:177, col: 1168, expected:1040, got:1041
-Mismatch, row:177, col: 1172, expected:1058, got:1057
-Mismatch, row:177, col: 1173, expected:1034, got:1035
-Mismatch, row:177, col: 1174, expected:1046, got:1047
-Mismatch, row:177, col: 1179, expected:1056, got:1057
-total mismatch:50
+total mismatch:0
 
-average error:2.8771e-07
+average error:0
 
-compare fail!
+result pass!
 
-Execute time:1.57793ms
-Throuphput:87.1006TFLOPS
+Execute time:1.20042ms
+Throuphput:114.492TFLOPS
 
